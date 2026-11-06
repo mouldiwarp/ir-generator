@@ -89,7 +89,20 @@ final class MeterState: ObservableObject {
     @Published var progress: Double = 0
     @Published var inPeak: Float = 0
     @Published var outPeak: Float = 0
+    /// Input peak readout: holds each new peak for `holdTime`, then follows the meter down.
     @Published var inHoldDB: Double = -100
+    private var holdSince = Date.distantPast
+    static let holdTime: TimeInterval = 1.5
+
+    func updateHold(_ peakDB: Double, meterDB: Double) {
+        let now = Date()
+        if peakDB >= inHoldDB {
+            inHoldDB = peakDB
+            holdSince = now
+        } else if now.timeIntervalSince(holdSince) > Self.holdTime {
+            inHoldDB = max(peakDB, meterDB)
+        }
+    }
     /// Seconds left in the current capture.
     @Published var remaining: Double = 0
 
@@ -310,7 +323,7 @@ final class CaptureModel: ObservableObject {
         // Meter ballistics: instant attack, ~300 ms release.
         meters.inPeak = max(s.inPeak, meters.inPeak * 0.8)
         meters.outPeak = max(s.outPeak, meters.outPeak * 0.8)
-        meters.inHoldDB = max(meters.inHoldDB, Analysis.dB(Double(s.inPeak)))
+        meters.updateHold(Analysis.dB(Double(s.inPeak)), meterDB: Analysis.dB(Double(meters.inPeak)))
         if let plan = runPlan, case .capturing = state {
             meters.progress = min(1, Double(s.recorded) / Double(max(1, plan.recordFrames)))
             meters.remaining = Double(max(0, plan.recordFrames - s.recorded)) / plan.settings.sampleRate

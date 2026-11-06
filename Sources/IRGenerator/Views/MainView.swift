@@ -199,6 +199,6 @@ struct TransportBar: View {
                 .frame(width: 58, alignment: .trailing)
             LedDot(on: clip, color: Theme.danger)
         }
-        .help(hold != nil ? "Input peak; the readout holds the highest peak of this run" : "Output peak")
+        .help(hold != nil ? "Input peak: each new peak is held for 1.5 s, then the readout follows the level down" : "Output peak")
     }
 }
