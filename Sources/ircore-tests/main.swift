@@ -29,6 +29,21 @@ func maxResponseDiff(_ a: [Double], _ b: [Double], rate: Double = fs, lo: Double
     return off.map { abs($0 - mean) }.max() ?? 0
 }
 
+// Diagnostics: ircore-tests --reprocess <capture folder> rebuilds a saved capture's IR and reports it.
+if let i = CommandLine.arguments.firstIndex(of: "--reprocess"), i + 1 < CommandLine.arguments.count {
+    struct Meta: Decodable { var settings: MeasurementSettings }
+    let dir = URL(fileURLWithPath: CommandLine.arguments[i + 1])
+    let meta = try! JSONDecoder().decode(Meta.self, from: Data(contentsOf: dir.appendingPathComponent("meta.json")))
+    let rec = try! WavFile.read(dir.appendingPathComponent("recording.wav")).samples
+    let plan = Measurement.plan(meta.settings)
+    print("recording \(rec.count) / plan \(plan.recordFrames)")
+    let r = Measurement.process(recording: rec, plan: plan)
+    let c = Analysis.response(r.ir, sampleRate: meta.settings.sampleRate, smoothing: 6, points: 9, fMin: 50, fMax: 12800)
+    print(String(format: "delay %d, PNR %.1f dB, peak index %d", r.delaySamples, r.peakToNoiseDB, Processing.peakIndex(r.ir)))
+    print("response (1/6 oct):", zip(c.frequencies, c.dB).map { String(format: "%.0f Hz %.2f", $0, $1 - c.dB[4]) }.joined(separator: " · "))
+    exit(0)
+}
+
 print("FFT")
 do {
     let n = 1 << 21
@@ -81,6 +96,19 @@ do {
     // Distortion products land before the impulse; the trimmed IR shouldn't have energy before the onset.
     let preEnergy = r1.ir[0..<8].reduce(0) { $0 + $1 * $1 }, total = r1.ir.reduce(0) { $0 + $1 * $1 }
     check("harmonic distortion removed from the IR", 10 * log10(preEnergy / total) < -40)
+}
+
+print("Keep delay")
+do {
+    var s = MeasurementSettings(); s.sweepSeconds = 2; s.highPass = false
+    let plan = Measurement.plan(s)
+    let rec = Simulator.record(plan, through: [Double](repeating: 0, count: 40) + cab, latency: 1275, noiseDB: -100)
+    let ok = Measurement.process(recording: rec, plan: plan, latency: 1258, keepDelay: true)
+    check("keeps the acoustic delay after the calibrated latency", ok.keptDelay && Processing.peakIndex(ok.ir) > 40 + 17)
+    // Calibration said 1299, but this run's round trip was shorter: never cut off the direct sound.
+    let late = Measurement.process(recording: rec, plan: plan, latency: 1299 + 40, keepDelay: true)
+    check("falls back to the direct sound when the latency overshoots", !late.keptDelay
+          && Processing.peakIndex(late.ir) >= Measurement.preroll(fs) && Processing.peakIndex(late.ir) < 40)
 }
 
 print("Periodic noise")

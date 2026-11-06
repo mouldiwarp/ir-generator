@@ -60,6 +60,10 @@ public struct MeasurementResult: Sendable {
     public var peakToNoiseDB: Double
     public var inputPeakDB: Double
     public var clipped: Bool
+    /// The IR kept the acoustic delay after the calibrated latency. False when that wasn't asked for, or when
+    /// the direct sound arrived before the calibrated latency (the USB round trip varies by about 1 ms between
+    /// runs), in which case the IR starts at the direct sound instead so it isn't cut off.
+    public var keptDelay: Bool
 }
 
 public enum Measurement {
@@ -110,12 +114,17 @@ public enum Measurement {
         let onset = Processing.onset(full, searchLength: min(full.count, Int(0.4 * fs)))
         let pnr = Analysis.peakToNoise(full, onset: onset, sampleRate: fs)
         let preroll = preroll(fs)
-        let start = (keepDelay ? (latency ?? onset) : onset) - preroll
+        var start = onset - preroll
+        var kept = false
+        if keepDelay, let l = latency, l <= onset {
+            start = l - preroll
+            kept = true
+        }
         var ir = Processing.slice(full, start: start, length: Int(s.irSeconds * fs))
         Processing.fadeIn(&ir, samples: min(preroll, max(0, onset - start)))
         if s.highPass { ir = Processing.highPass(ir, cutoff: s.highPassHz, sampleRate: fs) }
         Processing.fadeOut(&ir, samples: ir.count / 20)
         return MeasurementResult(ir: ir, response: avg, delaySamples: onset, peakToNoiseDB: pnr,
-                                 inputPeakDB: Analysis.dB(peakIn), clipped: peakIn >= 0.989)
+                                 inputPeakDB: Analysis.dB(peakIn), clipped: peakIn >= 0.989, keptDelay: kept)
     }
 }

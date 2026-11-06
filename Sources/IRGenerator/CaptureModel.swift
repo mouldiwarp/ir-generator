@@ -338,7 +338,7 @@ final class CaptureModel: ObservableObject {
             return
         }
         state = .processing
-        let latency = settings.latencyRate == plan.settings.sampleRate ? settings.latency : nil
+        let latency = latency(for: plan.settings.sampleRate)
         let keep = settings.keepDelay
         let recording = rec!
         Task.detached(priority: .userInitiated) {
@@ -362,6 +362,9 @@ final class CaptureModel: ObservableObject {
             post(.info, String(format: "Round-trip latency: %d samples (%.2f ms).", r.delaySamples, Double(r.delaySamples) / fs * 1000))
             return
         }
+        if settings.keepDelay && latency(for: fs) != nil && !r.keptDelay {
+            post(.warning, "This run's round trip was shorter than the calibrated latency (USB timing varies by about 1 ms between runs), so this IR starts at the direct sound instead of keeping the mic delay. Use Align & Blend to line up mics.")
+        }
         if r.peakToNoiseDB < 45 && !r.clipped {
             post(.warning, String(format: "Peak-to-noise is only %.0f dB. Raise the level or mic gain, add averages, or quieten the room.", r.peakToNoiseDB))
         }
@@ -384,7 +387,34 @@ final class CaptureModel: ObservableObject {
         selectedID = meta.id
     }
 
+    private func latency(for rate: Double) -> Int? { settings.latencyRate == rate ? settings.latency : nil }
+
     // MARK: - Library
+
+    /// Rebuilds a capture's IR from its saved recording, trimmed at the direct sound.
+    func reprocess(_ meta: CaptureMeta) {
+        guard let s = meta.settings, let rec = audio(meta.id)?.recording else { return }
+        let plan = Measurement.plan(s)
+        guard plan.recordFrames == rec.count else {
+            post(.error, "“\(meta.name)”: the recording doesn't match its settings, so it can't be reprocessed.")
+            return
+        }
+        let r = Measurement.process(recording: rec, plan: plan)
+        var m = meta
+        m.delaySamples = r.delaySamples
+        m.peakToNoiseDB = r.peakToNoiseDB
+        m.inputPeakDB = r.inputPeakDB
+        m.clipped = r.clipped
+        let audio = CaptureAudio(ir: r.ir, recording: rec)
+        audioCache[m.id] = audio
+        curveCache = curveCache.filter { !$0.key.hasPrefix(m.id.uuidString) }
+        if !isDemo {
+            do { try Library.save(m, audio: CaptureAudio(ir: r.ir, recording: nil)) }
+            catch { post(.error, "Couldn't save “\(m.name)”: \(error.localizedDescription)") }
+        }
+        update(m)
+        post(.info, "Reprocessed “\(m.name)” from its recording.")
+    }
 
     var selected: CaptureMeta? { captures.first { $0.id == selectedID } }
 

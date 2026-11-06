@@ -95,7 +95,10 @@ struct LibraryPanel: View {
         .contextMenu {
             Button("Export…") { model.selectedID = m.id; model.showExport = true }
             Button("Save Master WAV…") { model.saveMaster(m) }
-            if m.hasRecording { Button("Save Raw Recording…") { model.saveRecording(m) } }
+            if m.hasRecording {
+                Button("Reprocess from Recording") { model.reprocess(m) }
+                Button("Save Raw Recording…") { model.saveRecording(m) }
+            }
             if let src = m.importedFrom {
                 Button("Show Original in Finder") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: src)]) }
             }

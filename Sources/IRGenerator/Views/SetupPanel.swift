@@ -164,7 +164,7 @@ struct SetupPanel: View {
             LampCheck(text: "Keep mic distance delay", on: $model.settings.keepDelay,
                       detail: model.settings.latency == nil
                         ? "Needs a loopback calibration. Off: each IR starts at the direct sound."
-                        : "IRs keep the mic's time of flight, for phase-aligning several mics.")
+                        : "Keeps the mic's time of flight, but only to about ±1 ms: USB timing varies between runs. For blending mics, Align & Blend is more precise.")
                 .disabled(model.settings.latency == nil)
         }
     }
