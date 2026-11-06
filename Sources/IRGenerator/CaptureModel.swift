@@ -131,6 +131,7 @@ final class CaptureModel: ObservableObject {
     @Published var checklist: [Bool] = [false, false, false, false]
     @Published var showExport = false
     @Published var showAlign = false
+    @Published var showChecklist = false
     @Published var showMicSwap = false
     @Published var tools: ToolSettings { didSet { saveTools() } }
     @Published private(set) var micCurves: [MicCurve] = MicLibrary.builtIn
@@ -276,7 +277,7 @@ final class CaptureModel: ObservableObject {
         if state == .levelCheck { stopRun() }
         guard state == .idle else { return }
         guard calibration || checklistComplete else {
-            post(.warning, "Tick the safety checklist before the first capture.")
+            showChecklist = true          // the sheet's Capture button comes back here once it's ticked
             return
         }
         guard let (dev, fs) = prepare() else { return }

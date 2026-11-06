@@ -29,6 +29,9 @@ struct MainView: View {
         .sheet(isPresented: $model.showExport) {
             if let m = model.selected { ExportSheet(meta: m).environmentObject(model) }
         }
+        .sheet(isPresented: $model.showChecklist) {
+            ChecklistSheet().environmentObject(model)
+        }
         .sheet(isPresented: $model.showAlign) {
             AlignSheet(members: model.plotted.map(\.meta)).environmentObject(model)
         }
@@ -200,5 +203,48 @@ struct TransportBar: View {
             LedDot(on: clip, color: Theme.danger)
         }
         .help(hold != nil ? "Input peak: each new peak is held for 1.5 s, then the readout follows the level down" : "Output peak")
+    }
+}
+
+/// Shown when Capture is pressed before the safety checklist is complete.
+struct ChecklistSheet: View {
+    @EnvironmentObject var model: CaptureModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "exclamationmark.shield.fill").foregroundStyle(Theme.gold)
+                Text("BEFORE CAPTURING").font(Theme.headingBold(14)).tracking(2)
+            }
+            Text("Confirm each item. The checklist resets every time the app starts.")
+                .font(.system(size: 11)).foregroundStyle(Theme.dim)
+            ForEach(Array(CaptureModel.checklistItems.enumerated()), id: \.offset) { i, item in
+                LampCheck(text: item.0, on: $model.checklist[i], detail: item.1)
+            }
+            HStack(spacing: 6) {
+                Text("SIGNAL PATH").font(Theme.caption(9)).tracking(1).foregroundStyle(Theme.dim)
+                LedReadout(text: "\(model.settings.route.label) → MIC IN \(model.settings.inputChannel + 1)", color: Theme.haze)
+                Text(String(format: "at %.1f dBFS", model.settings.levelDB)).font(.system(size: 11)).foregroundStyle(Theme.dim)
+            }
+            .padding(.top, 4)
+            HStack {
+                LatchButton(title: "TICK ALL", on: false, height: 28) { model.checklist = model.checklist.map { _ in true } }
+                    .frame(width: 100)
+                Spacer()
+                LatchButton(title: "CANCEL", on: false, height: 28) { dismiss() }
+                    .frame(width: 90).keyboardShortcut(.cancelAction)
+                BigLampButton(title: "CAPTURE", systemImage: "waveform.path", enabled: model.checklistComplete) {
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { model.capture() }
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(18)
+        .frame(width: 520)
+        .background(Theme.panel)
+        .foregroundStyle(Theme.text)
+        .preferredColorScheme(.dark)
     }
 }

@@ -71,6 +71,8 @@ struct SectionLabel: View {
                 .font(Theme.caption(10))
                 .tracking(1.2)
                 .foregroundStyle(Theme.gold)
+                .lineLimit(1)
+                .fixedSize()
             Rectangle().fill(Theme.gold.opacity(0.25)).frame(height: 1)
         }
         .accessibilityAddTraits(.isHeader)
