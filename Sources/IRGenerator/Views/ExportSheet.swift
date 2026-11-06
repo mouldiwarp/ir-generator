@@ -41,6 +41,14 @@ struct ExportSheet: View {
                         .frame(width: 180)
                     Spacer()
                 }
+                FieldRow(label: "High cut") {
+                    LampSegmented(options: [0.0, 16000, 12000, 10000, 8000], selection: Binding(
+                        get: { model.settings.export.highCut }, set: { model.settings.export.highCutHz = $0 > 0 ? $0 : nil })) {
+                        $0 == 0 ? "OFF" : "\(Int($0 / 1000)) kHz"
+                    }
+                    .frame(width: 330)
+                    Spacer()
+                }
                 LampCheck(text: "Minimum phase", on: $model.settings.export.minimumPhase,
                           detail: "Same tone, with all the energy at the start. Short IRs keep more low end. Mic-distance phase information is lost.")
             }

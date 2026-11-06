@@ -175,6 +175,22 @@ do {
     check("matched RMS never exceeds −0.1 dBFS peak", Processing.peak(r) <= pow(10, -0.1 / 20) + 1e-12)
 }
 
+print("High cut")
+do {
+    let imp = [1] + [Double](repeating: 0, count: 65535)
+    let lp = Processing.lowPass(imp, cutoff: 12000, sampleRate: fs)
+    let c = Analysis.response(lp, sampleRate: fs, points: 400, fMin: 100, fMax: 20000, minFFT: 65536)
+    func at(_ f: Double) -> Double { c.dB[c.frequencies.firstIndex { $0 >= f }!] }
+    check("high cut: flat at 1 kHz, −3 dB at 12 kHz, ≥ 15 dB down at 20 kHz",
+          abs(at(1000)) < 0.05 && abs(at(12000) + 3) < 0.3 && at(19900) < -15,
+          String(format: "%.2f / %.2f / %.1f", at(1000), at(12000), at(19900)))
+    var o = ExportOptions(); o.highCutHz = 10000
+    let out = ExportRenderer.render(cab, masterRate: fs, preset: ExportPreset.all[1], options: o)
+    check("export with high cut keeps length", out.count == 2048)
+    let old = try! JSONDecoder().decode(ExportOptions.self, from: Data(#"{"normalization":"peak","minimumPhase":false,"fadeFraction":0.1}"#.utf8))
+    check("settings saved before high cut still load", old.highCut == 0)
+}
+
 print("Export")
 do {
     var opts = ExportOptions()

@@ -76,6 +76,15 @@ public enum Processing {
         return out
     }
 
+    /// Fourth-order (24 dB/octave) Butterworth low-pass: flat passband, no resonant bump, so a high cut
+    /// above a cab's natural roll-off removes noise and fizz without changing the tone.
+    public static func lowPass(_ h: [Double], cutoff: Double, sampleRate fs: Double) -> [Double] {
+        guard cutoff > 0, cutoff < fs * 0.49 else { return h }
+        var a = Biquad.lowPass(f: cutoff, q: 0.541_196_1, fs: fs)
+        var b = Biquad.lowPass(f: cutoff, q: 1.306_563, fs: fs)
+        return b.run(a.run(h))
+    }
+
     /// Minimum-phase version with the same magnitude response (real-cepstrum folding).
     /// Moves all the energy to the front, which removes pre-delay and makes short truncations hold up better.
     public static func minimumPhase(_ h: [Double]) -> [Double] {

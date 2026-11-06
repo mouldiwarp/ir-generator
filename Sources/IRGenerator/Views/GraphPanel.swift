@@ -48,6 +48,13 @@ struct GraphPanel: View {
 
     private var lengthMenu: some View {
         HStack(spacing: 6) {
+            Text("HIGH CUT").font(Theme.caption(9)).tracking(1).foregroundStyle(Theme.dim)
+            WellMenu(options: [0.0, 16000, 12000, 10000, 8000, 6000], selection: Binding(
+                get: { model.settings.export.highCut }, set: { model.settings.export.highCutHz = $0 > 0 ? $0 : nil })) {
+                $0 == 0 ? "Off" : "\(Int($0 / 1000)) kHz"
+            }
+            .frame(width: 84)
+            .help("24 dB/octave high cut, used for export and previewed here. 10–12 kHz removes noise above a cab's roll-off without changing its tone.")
             Text("LENGTH").font(Theme.caption(9)).tracking(1).foregroundStyle(Theme.dim)
             WellMenu(options: [0, 8192, 4096, 2048, 1024], selection: g.viewLength) { $0 == 0 ? "Master" : "\($0) smp" }
                 .frame(width: 100)

@@ -57,7 +57,11 @@ public struct ExportOptions: Codable, Hashable, Sendable {
     public var normalization: Normalization = .peak
     public var minimumPhase = false
     public var fadeFraction = 0.1
+    /// High-cut (24 dB/octave) frequency; nil or 0 = off. Optional so older saved settings still decode.
+    public var highCutHz: Double?
     public init() {}
+
+    public var highCut: Double { highCutHz ?? 0 }
 }
 
 public enum ExportRenderer {
@@ -67,6 +71,7 @@ public enum ExportRenderer {
         var h = master
         if options.minimumPhase { h = Processing.minimumPhase(h) }
         if Double(sampleRate) != masterRate { h = Processing.resample(h, from: masterRate, to: Double(sampleRate)) }
+        if options.highCut > 0 { h = Processing.lowPass(h, cutoff: options.highCut, sampleRate: Double(sampleRate)) }
         h = Processing.truncate(h, length: length, fadeFraction: options.fadeFraction)
         switch options.normalization {
         case .peak: h = Processing.normalizedPeak(h, dBFS: -0.1)

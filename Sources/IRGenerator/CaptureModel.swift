@@ -590,15 +590,18 @@ final class CaptureModel: ObservableObject {
     /// The IR as previewed in the graphs: optionally cut to an export length (with the export fade).
     func previewIR(_ meta: CaptureMeta) -> [Double]? {
         guard let a = audio(meta.id) else { return nil }
+        var h = a.ir
+        let cut = settings.export.highCut
+        if cut > 0 { h = Processing.lowPass(h, cutoff: cut, sampleRate: meta.sampleRate) }
         let n = settings.graph.viewLength
-        guard n > 0 else { return a.ir }
+        guard n > 0 else { return h }
         let len = Int((Double(n) * meta.sampleRate / 48000).rounded())
-        return Processing.truncate(a.ir, length: len, fadeFraction: settings.export.fadeFraction)
+        return Processing.truncate(h, length: len, fadeFraction: settings.export.fadeFraction)
     }
 
     func curve(_ meta: CaptureMeta) -> Analysis.Curve? {
         let g = settings.graph
-        let key = "\(meta.id)-\(g.smoothing)-\(g.viewLength)-\(settings.export.fadeFraction)"
+        let key = "\(meta.id)-\(g.smoothing)-\(g.viewLength)-\(settings.export.fadeFraction)-\(settings.export.highCut)"
         if let c = curveCache[key] { return c }
         guard let h = previewIR(meta) else { return nil }
         let c = Analysis.response(h, sampleRate: meta.sampleRate, smoothing: g.smoothing > 0 ? g.smoothing : nil, points: 600)

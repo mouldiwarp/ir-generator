@@ -41,6 +41,8 @@ struct FrequencyPlot: View {
     var fMin = 20.0, fMax = 20000.0
     var dbStep = 6.0
     var dbTop = 6.0, dbBottom = -48.0
+    /// Fit the dB range to the curves (down to −96 dB) instead of using dbTop/dbBottom.
+    var autoRange = true
     @State private var hover: CGPoint?
 
     /// Each curve is shifted so its maximum in 40 Hz–12 kHz sits at 0 dB.
@@ -51,8 +53,25 @@ struct FrequencyPlot: View {
         return c.dB.map { $0 - (m.isFinite ? m : 0) }
     }
 
+    /// Visible range: the lowest point of any curve in the band (with a little margin), on a 6 dB grid,
+    /// at least 30 dB deep and at most 96; 12 dB grid lines once it's deeper than 60 dB.
+    private func range(_ norm: [[Double]]) -> (Double, Double, Double) {
+        guard autoRange, !series.isEmpty else { return (self.dbTop, self.dbBottom, self.dbStep) }
+        var lo = Double.infinity, hi = -Double.infinity
+        for (i, s) in series.enumerated() {
+            for (k, f) in s.curve.frequencies.enumerated() where f >= fMin && f <= fMax {
+                lo = min(lo, norm[i][k]); hi = max(hi, norm[i][k])
+            }
+        }
+        guard lo.isFinite, hi.isFinite else { return (self.dbTop, self.dbBottom, self.dbStep) }
+        let top = max(6, (hi / 6).rounded(.up) * 6 + 6)
+        let bottom = max(-96, min(top - 30, ((lo - 3) / 6).rounded(.down) * 6))
+        return (top, bottom, top - bottom > 60 ? 12 : 6)
+    }
+
     var body: some View {
         let norm = series.map { normalised($0.curve, $0.normalize) }
+        let (dbTop, dbBottom, dbStep) = range(norm)
         Canvas { ctx, size in
             let a = PlotArea(size).rect
             let lf0 = log10(fMin), lf1 = log10(fMax)

@@ -75,7 +75,7 @@ struct MicSwapSheet: View {
                 FrequencyPlot(series: [
                     .init(id: UUID(), curve: MicSwap.correctionCurve(source: source, target: target, options: model.tools.mic),
                           color: Theme.amber, name: "Correction", normalize: false, dashed: true),
-                ], dbStep: 6, dbTop: 18, dbBottom: -18)
+                ], dbStep: 6, dbTop: 18, dbBottom: -18, autoRange: false)
                 .frame(height: 120)
             }
             .padding(6)
