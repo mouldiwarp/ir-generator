@@ -27,6 +27,11 @@ struct IRGeneratorApp: App {
                 Divider()
                 Button("Export…") { model.showExport = true }.keyboardShortcut("e").disabled(model.selected == nil)
             }
+            CommandMenu("Tools") {
+                Button("Align & Blend…") { model.showAlign = true }.keyboardShortcut("b").disabled(model.plotted.count < 2)
+                Button("Mic Swap…") { model.showMicSwap = true }.keyboardShortcut("m").disabled(model.selected == nil)
+                Button("Import Mic Curve…") { model.importMicCurve() }
+            }
         }
     }
 }
@@ -53,7 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func snapshot(_ tabs: [GraphTab], dir: URL) {
-        guard let tab = tabs.first else { exit(0) }
+        guard let tab = tabs.first else { snapshotSheets(dir: dir); return }
         MainActor.assumeIsolated { model?.setTab(tab) }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             if let view = NSApp.windows.first(where: { $0.title == "IR Generator" })?.contentView,
@@ -91,6 +96,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                          s.done ? "yes" : "NO", s.recorded, frames, Date().timeIntervalSince(t0), 20 * log10(max(peak, 1e-10))))
             exit(s.done ? 0 : 1)
         }
+    }
+
+    /// Opens Mic Swap, then Align & Blend, and writes each sheet to PNG.
+    private func snapshotSheets(dir: URL) {
+        let steps: [(String, @MainActor (CaptureModel) -> Void, @MainActor (CaptureModel) -> Void)] = [
+            ("micswap", { $0.showMicSwap = true }, { $0.showMicSwap = false }),
+            ("align", { $0.showAlign = true }, { $0.showAlign = false }),
+        ]
+        func run(_ i: Int) {
+            guard i < steps.count, let model else { exit(0) }
+            MainActor.assumeIsolated { steps[i].1(model) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                if let view = NSApp.windows.first(where: { $0.sheetParent != nil })?.contentView,
+                   let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                    view.cacheDisplay(in: view.bounds, to: rep)
+                    try? rep.representation(using: .png, properties: [:])?.write(to: dir.appendingPathComponent("\(steps[i].0).png"))
+                }
+                MainActor.assumeIsolated { steps[i].2(model) }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { run(i + 1) }
+            }
+        }
+        run(0)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }

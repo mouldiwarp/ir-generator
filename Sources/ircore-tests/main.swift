@@ -171,5 +171,60 @@ do {
     check("spectrogram size", sg.values.count == sg.rows * sg.columns && sg.columns == 100)
 }
 
+print("Alignment")
+do {
+    let a = Array(cab[0..<4096])
+    let fracShift = Alignment.shift(a, by: 7.3)
+    let back = Alignment.shift(fracShift, by: -7.3)
+    check("fractional shift round trip < −60 dB", errorDB(Array(back[0..<4000]), Array(a[0..<4000])) < -60,
+          String(format: "%.1f dB", errorDB(Array(back[0..<4000]), Array(a[0..<4000]))))
+    // A second "mic": the cab through a different EQ, 7.3 samples later, inverted.
+    var other = Biquad.peaking(f: 3000, q: 1, gainDB: 4, fs: fs)
+    let b = Alignment.shift(other.run(a), by: 7.3).map { -$0 }
+    let r = Alignment.analyze(reference: a, b, sampleRate: fs)
+    check("detects delay (−7.3 samples to align)", abs(r.shift + 7.3) < 0.15, String(format: "%.3f", r.shift))
+    check("detects inverted polarity", r.inverted)
+    check("high correlation", r.correlation > 0.9, String(format: "%.3f", r.correlation))
+    let aligned = Alignment.apply(reference: a, others: [b], results: [r], flipPolarity: [true])
+    let rb = Alignment.analyze(reference: aligned[0], aligned[1], sampleRate: fs)
+    check("after alignment: no residual shift, normal polarity", abs(rb.shift) < 0.15 && !rb.inverted,
+          String(format: "%.3f %@", rb.shift, rb.inverted ? "inv" : "norm"))
+    // The aligned blend has no comb cancellation: its low-mid level beats the misaligned one.
+    let bad = Alignment.blend([a, b], weights: [1, 1]), good = Alignment.blend(aligned, weights: [1, 1])
+    func lowMid(_ h: [Double]) -> Double {
+        let c = Analysis.response(h, sampleRate: fs, smoothing: 3, fMin: 200, fMax: 3000)
+        return c.dB.reduce(0, +) / Double(c.dB.count)
+    }
+    check("aligned blend keeps its low mids", lowMid(good) - lowMid(bad) > 6,
+          String(format: "%.1f vs %.1f dB", lowMid(good), lowMid(bad)))
+}
+
+print("Mic swap")
+do {
+    let sm57 = MicLibrary.builtIn.first { $0.id == "sm57" }!
+    let r121 = MicLibrary.builtIn.first { $0.id == "r121" }!
+    var o = MicSwap.Options()
+    o.fLow = 20; o.fHigh = 20000; o.maxBoostDB = 30; o.maxCutDB = 30
+    let speaker = Array(cab[0..<8192])
+    // Simulate a capture: speaker through the SM57 (from flat), then remove the SM57 again.
+    let withMic = MicSwap.apply(speaker, sampleRate: fs, source: MicLibrary.flat, target: sm57, options: o)
+    let removed = MicSwap.apply(withMic, sampleRate: fs, source: sm57, target: nil, options: o)
+    // Flat has no proximity (omni); the SM57 removal also removes its proximity bass, so compare above 400 Hz.
+    let d1 = maxResponseDiff(removed, speaker, lo: 400, hi: 12000)
+    check("SM57 applied then removed ≈ speaker (±0.5 dB, 400 Hz–12 kHz)", d1 < 0.5, String(format: "%.3f dB", d1))
+    let swapped = MicSwap.apply(withMic, sampleRate: fs, source: sm57, target: r121, options: o)
+    let direct = MicSwap.apply(speaker, sampleRate: fs, source: MicLibrary.flat, target: r121, options: o)
+    let d2 = maxResponseDiff(swapped, direct, lo: 400, hi: 12000)
+    check("SM57 → R-121 ≈ R-121 directly (±0.5 dB)", d2 < 0.5, String(format: "%.3f dB", d2))
+    let p25 = MicSwap.proximityDB(100, pattern: .cardioid, distance: 0.025)
+    check("cardioid proximity ≈ +8 dB at 100 Hz, 25 mm", abs(p25 - 8) < 1.5, String(format: "%.1f dB", p25))
+    check("omni has no proximity", MicSwap.proximityDB(100, pattern: .omni, distance: 0.01) == 0)
+    let h = MicSwap.filter(source: sm57, target: nil, options: MicSwap.Options(), sampleRate: fs)
+    check("correction filter is minimum phase (energy at the start)", Processing.peakIndex(h) < 20, "peak \(Processing.peakIndex(h))")
+    let c = MicCurve.parse("* REW export\nFreq(Hz) SPL(dB) Phase\n20, -3, 0\n1000\t0\t0\n10000;2;0\n", name: "Mine")
+    check("parses REW/CSV curves", c?.points.count == 3 && abs((c?.dB(at: 10000) ?? 0) - 2) < 1e-9)
+    check("curves normalised to 0 dB at 1 kHz", abs(sm57.dB(at: 1000)) < 1e-12)
+}
+
 print(failures == 0 ? "\nAll tests passed." : "\n\(failures) test(s) failed.")
 exit(failures == 0 ? 0 : 1)

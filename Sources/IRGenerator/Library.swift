@@ -18,8 +18,11 @@ struct CaptureMeta: Codable, Identifiable, Hashable {
     var clipped = false
     var importedFrom: String?
     var hasRecording = false
+    /// For IRs made by alignment, blending or mic swap: what was done, to which capture.
+    var derivedFrom: String?
 
     var isImported: Bool { importedFrom != nil }
+    var isDerived: Bool { derivedFrom != nil }
 }
 
 /// In-memory audio for a capture.
@@ -74,6 +77,26 @@ enum Library {
         guard let ir = try? WavFile.read(dir.appendingPathComponent("ir.wav")) else { return nil }
         let rec = meta.hasRecording ? (try? WavFile.read(dir.appendingPathComponent("recording.wav")))?.samples : nil
         return CaptureAudio(ir: ir.samples, recording: rec)
+    }
+
+    static var micRoot: URL {
+        root.deletingLastPathComponent().appendingPathComponent("Mics", isDirectory: true)
+    }
+
+    static func loadMicCurves() -> [MicCurve] {
+        guard let files = try? FileManager.default.contentsOfDirectory(at: micRoot, includingPropertiesForKeys: nil) else { return [] }
+        return files.filter { $0.pathExtension == "json" }
+            .compactMap { try? JSONDecoder().decode(MicCurve.self, from: Data(contentsOf: $0)) }
+            .sorted { $0.name < $1.name }
+    }
+
+    static func saveMicCurve(_ c: MicCurve) throws {
+        try FileManager.default.createDirectory(at: micRoot, withIntermediateDirectories: true)
+        try JSONEncoder().encode(c).write(to: micRoot.appendingPathComponent("\(c.id).json"), options: .atomic)
+    }
+
+    static func deleteMicCurve(_ id: String) {
+        try? FileManager.default.removeItem(at: micRoot.appendingPathComponent("\(id).json"))
     }
 
     static func delete(_ id: UUID) {

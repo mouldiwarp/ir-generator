@@ -73,6 +73,34 @@ directly. Files are named `<name>_<Fractal|TONEX>_<rate>_<length>.wav`.
 - **Recording:** the raw mic signal, with clip lines.
 - **Spectrogram:** the recording on a log-frequency axis. Harmonic distortion shows up as faint lines above the sweep.
 
+## Align & Blend (⌘B)
+
+Shows the selected IR plus the ones you've added to the graph (eye buttons), choose a reference, and each other IR is:
+- **Aligned** by band-limited cross-correlation (80 Hz–4 kHz, ±5 ms), to a fraction of a sample. Onset trimming
+  alone can leave mics 0.1–0.3 ms apart, because they rise at different speeds.
+- **Checked for polarity.** An inverted IR (for example, a ribbon or a rear mic) is detected and can be flipped.
+- **Previewed as a blend**, with the curve as captured (red, dashed) against the aligned one (gold). With two IRs,
+  a mix slider sets the balance.
+
+Save the aligned IRs or the blend as new library entries, then export them as usual. The alignment comes from the
+waveforms, so it gives the best-summing position, not the true distance between the mics.
+
+## Mic Swap (⌘M)
+
+Removes the capture mic's response from an IR (**speaker only**), or replaces it with another mic's. The correction
+is a minimum-phase filter built from the ratio of the two mics' magnitude curves, including each pattern's proximity
+bass at the chosen distance. It's limited to +6/12/18 dB of boost and fades to 0 dB below 35 Hz and above 16 kHz.
+
+The built-in curves are smoothed approximations of published on-axis responses, not manufacturer data:
+- Dynamic: SM57, MD 421, e906, i5, RE20, SM7B
+- Ribbon: R-121, M 160
+- Condenser: C414, U 87
+- Reference: flat
+
+For accuracy, use **Import curve…** to load a measured or official response ("frequency dB" lines, REW `.txt`,
+`.frd` or `.csv`) and set its polar pattern. A swap is an estimate: off-axis colouration, comb filtering and
+reflections in the original capture stay in.
+
 ## Layout
 
 | Path | Contents |

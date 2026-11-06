@@ -29,6 +29,12 @@ struct MainView: View {
         .sheet(isPresented: $model.showExport) {
             if let m = model.selected { ExportSheet(meta: m).environmentObject(model) }
         }
+        .sheet(isPresented: $model.showAlign) {
+            AlignSheet(members: model.plotted.map(\.meta)).environmentObject(model)
+        }
+        .sheet(isPresented: $model.showMicSwap) {
+            if let m = model.selected { MicSwapSheet(meta: m).environmentObject(model) }
+        }
     }
 }
 

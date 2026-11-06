@@ -5,6 +5,11 @@ public enum Analysis {
     public struct Curve: Sendable {
         public var frequencies: [Double]
         public var dB: [Double]
+
+        public init(frequencies: [Double], dB: [Double]) {
+            self.frequencies = frequencies
+            self.dB = dB
+        }
     }
 
     public static func dB(_ v: Double) -> Double { v > 0 ? 20 * log10(v) : -200 }

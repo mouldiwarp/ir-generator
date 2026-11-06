@@ -32,22 +32,27 @@ struct FrequencyPlot: View {
         let curve: Analysis.Curve
         let color: Color
         let name: String
+        /// Shift so the 40 Hz–12 kHz maximum sits at 0 dB (off for correction curves, which are absolute).
+        var normalize = true
+        var dashed = false
     }
 
     let series: [Series]
     var fMin = 20.0, fMax = 20000.0
+    var dbStep = 6.0
     var dbTop = 6.0, dbBottom = -48.0
     @State private var hover: CGPoint?
 
     /// Each curve is shifted so its maximum in 40 Hz–12 kHz sits at 0 dB.
-    private func normalised(_ c: Analysis.Curve) -> [Double] {
+    private func normalised(_ c: Analysis.Curve, _ on: Bool) -> [Double] {
+        guard on else { return c.dB }
         var m = -Double.infinity
         for (f, v) in zip(c.frequencies, c.dB) where f >= 40 && f <= 12000 { m = max(m, v) }
         return c.dB.map { $0 - (m.isFinite ? m : 0) }
     }
 
     var body: some View {
-        let norm = series.map { normalised($0.curve) }
+        let norm = series.map { normalised($0.curve, $0.normalize) }
         Canvas { ctx, size in
             let a = PlotArea(size).rect
             let lf0 = log10(fMin), lf1 = log10(fMax)
@@ -67,12 +72,12 @@ struct FrequencyPlot: View {
             for f in [20.0, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000] where f >= fMin && f <= fMax {
                 axisLabel(ctx, formatHz(f), at: CGPoint(x: x(f), y: a.maxY + 5), anchor: .top)
             }
-            var d = (dbBottom / 6).rounded(.up) * 6
+            var d = (dbBottom / dbStep).rounded(.up) * dbStep
             while d <= dbTop {
                 var p = Path(); p.move(to: CGPoint(x: a.minX, y: y(d))); p.addLine(to: CGPoint(x: a.maxX, y: y(d)))
                 gridLine(ctx, p, major: d == 0)
-                if Int(d) % 12 == 0 { axisLabel(ctx, "\(Int(d))", at: CGPoint(x: a.minX - 5, y: y(d)), anchor: .trailing) }
-                d += 6
+                if Int(d) % Int(dbStep * 2) == 0 { axisLabel(ctx, d > 0 ? "+\(Int(d))" : "\(Int(d))", at: CGPoint(x: a.minX - 5, y: y(d)), anchor: .trailing) }
+                d += dbStep
             }
             axisLabel(ctx, "dB", at: CGPoint(x: 4, y: a.minY), anchor: .topLeading, color: Theme.gold.opacity(0.8))
             axisLabel(ctx, "Hz", at: CGPoint(x: a.minX - 14, y: a.maxY + 5), anchor: .topTrailing, color: Theme.gold.opacity(0.8))
@@ -91,7 +96,8 @@ struct FrequencyPlot: View {
                         g.stroke(p, with: .color(s.color.opacity(0.6)), lineWidth: 3)
                     }
                 }
-                ctx.stroke(p, with: .color(s.color.opacity(i == 0 ? 1 : 0.8)), lineWidth: i == 0 ? 1.8 : 1.2)
+                ctx.stroke(p, with: .color(s.color.opacity(i == 0 ? 1 : 0.8)),
+                           style: StrokeStyle(lineWidth: i == 0 ? 1.8 : 1.2, dash: s.dashed ? [5, 3] : []))
             }
 
             // Hover crosshair and readouts

@@ -36,17 +36,7 @@ public enum Simulator {
         return rec
     }
 
-    public static func convolve(_ a: [Double], _ b: [Double]) -> [Double] {
-        let n = FFT.size(atLeast: a.count + b.count)
-        let fft = FFT(size: n)
-        let A = fft.forward(real: a), B = fft.forward(real: b)
-        var re = [Double](repeating: 0, count: n), im = re
-        for k in 0..<n {
-            re[k] = A.re[k] * B.re[k] - A.im[k] * B.im[k]
-            im[k] = A.re[k] * B.im[k] + A.im[k] * B.re[k]
-        }
-        return Array(fft.inverseReal(re, im)[0..<(a.count + b.count - 1)])
-    }
+    public static func convolve(_ a: [Double], _ b: [Double]) -> [Double] { Processing.convolve(a, b) }
 }
 
 /// RBJ audio-EQ-cookbook biquad.

@@ -11,6 +11,16 @@ struct LibraryPanel: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     SectionLabel("Captures")
+                    Button { model.showAlign = true } label: {
+                        Label("ALIGN", systemImage: "align.horizontal.left").font(Theme.caption(9.5)).tracking(0.8)
+                            .padding(.horizontal, 7).frame(height: 18)
+                            .background(LampFace(on: false))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(model.plotted.count < 2)
+                    .opacity(model.plotted.count < 2 ? 0.45 : 1)
+                    .help(model.plotted.count < 2 ? "Show another IR with its eye button to align and blend it with the selected one"
+                                                  : "Phase-align and blend the IRs on the graph (⌘B)")
                     Button { model.importFiles() } label: {
                         Label("IMPORT", systemImage: "plus").font(Theme.caption(9.5)).tracking(0.8)
                             .padding(.horizontal, 7).frame(height: 18)
@@ -51,7 +61,7 @@ struct LibraryPanel: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(m.name).font(Theme.heading(12)).foregroundStyle(selected ? Theme.offwhite : Theme.text.opacity(0.85)).lineLimit(1)
                 HStack(spacing: 6) {
-                    Text(m.isImported ? "IMPORTED" : m.date.formatted(date: .abbreviated, time: .shortened).uppercased())
+                    Text(m.isImported ? "IMPORTED" : m.isDerived ? "PROCESSED" : m.date.formatted(date: .abbreviated, time: .shortened).uppercased())
                         .font(Theme.caption(8.5)).tracking(0.6).foregroundStyle(Theme.dim)
                     if let p = m.peakToNoiseDB {
                         Text(String(format: "%.0f dB", p)).font(.system(size: 9, design: .monospaced))
@@ -115,14 +125,17 @@ struct DetailCard: View {
                 if let s = meta.settings {
                     info("Signal", "\(s.method.label.capitalized) · \(Int(s.f1)) Hz–\(Int(s.f2 / 1000)) kHz · ×\(s.averages)")
                 }
+                if let d = meta.derivedFrom { info("Made by", d) }
                 if let r = meta.route { info("Route", r) }
                 if let l = meta.levelDB { info("Level", String(format: "%.1f dBFS", l)) }
                 info("Rate", String(format: "%.1f kHz", meta.sampleRate / 1000))
             }
             HStack(spacing: 6) {
-                LatchButton(title: "EXPORT…", on: true, height: 24) { model.showExport = true }
+                LatchButton(title: "MIC SWAP…", on: false, height: 24) { model.showMicSwap = true }
+                    .help("Remove the capture mic's response, or swap it for another mic's (⌘M)")
                 LatchButton(title: "SAVE MASTER", on: false, height: 24) { model.saveMaster(meta) }
             }
+            LatchButton(title: "EXPORT…", on: true, height: 24) { model.showExport = true }
         }
     }
 

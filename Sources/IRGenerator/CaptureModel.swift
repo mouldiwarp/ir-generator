@@ -48,6 +48,16 @@ struct AppSettings: Codable, Equatable {
     static let lockedCeiling = -12.0
 }
 
+/// Settings for the Align & Blend and Mic Swap tools (stored separately from AppSettings).
+struct ToolSettings: Codable, Equatable {
+    var micSourceID = "sm57"
+    /// nil = remove the mic (speaker only).
+    var micTargetID: String? = "r121"
+    var mic = MicSwap.Options()
+    /// Reference IR's weight in a two-IR blend, 0…1.
+    var blendMix = 0.5
+}
+
 enum GraphTab: String, Codable, CaseIterable {
     case frequency, impulse, recording, spectrogram
     var label: String { rawValue.uppercased() }
@@ -107,6 +117,10 @@ final class CaptureModel: ObservableObject {
     /// Safety checklist; reset every launch.
     @Published var checklist: [Bool] = [false, false, false, false]
     @Published var showExport = false
+    @Published var showAlign = false
+    @Published var showMicSwap = false
+    @Published var tools: ToolSettings { didSet { saveTools() } }
+    @Published private(set) var micCurves: [MicCurve] = MicLibrary.builtIn
     @Published private(set) var microphoneAuthorized = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
 
     let isDemo: Bool
@@ -128,6 +142,9 @@ final class CaptureModel: ObservableObject {
     init(demo: Bool = false) {
         isDemo = demo
         settings = Self.loadSettings()
+        tools = (UserDefaults.standard.data(forKey: "tools")).flatMap { try? JSONDecoder().decode(ToolSettings.self, from: $0) }
+            ?? ToolSettings()
+        if !demo { micCurves = MicLibrary.builtIn + Library.loadMicCurves() }
         refreshDevices()
         if demo {
             loadDemo()
@@ -162,6 +179,11 @@ final class CaptureModel: ObservableObject {
         if settings.graph != old.graph { /* view-only */ }
         guard !isDemo, let d = try? JSONEncoder().encode(settings) else { return }
         UserDefaults.standard.set(d, forKey: "settings")
+    }
+
+    private func saveTools() {
+        guard !isDemo, let d = try? JSONEncoder().encode(tools) else { return }
+        UserDefaults.standard.set(d, forKey: "tools")
     }
 
     var gain: Float { Float(pow(10, settings.levelDB / 20)) }
@@ -403,6 +425,65 @@ final class CaptureModel: ObservableObject {
         } catch {
             post(.error, "\(url.lastPathComponent): \(error.localizedDescription)")
         }
+    }
+
+    // MARK: - Derived IRs (align, blend, mic swap)
+
+    /// Adds a processed IR to the library as a new capture.
+    @discardableResult
+    func addDerived(from source: CaptureMeta, name: String, note: String, ir: [Double], sampleRate: Double? = nil,
+                    select: Bool = true) -> CaptureMeta {
+        var meta = CaptureMeta(name: name, sampleRate: sampleRate ?? source.sampleRate)
+        meta.settings = source.settings
+        meta.route = source.route
+        meta.levelDB = source.levelDB
+        meta.derivedFrom = note
+        meta.notes = source.notes
+        let audio = CaptureAudio(ir: ir, recording: nil)
+        audioCache[meta.id] = audio
+        if !isDemo {
+            do { try Library.save(meta, audio: audio) } catch { post(.error, "Couldn't save “\(name)”: \(error.localizedDescription)") }
+        }
+        captures.insert(meta, at: 0)
+        if select { selectedID = meta.id }
+        return meta
+    }
+
+    /// The IR resampled to `rate` if needed (for comparing captures made at different rates).
+    func ir(_ meta: CaptureMeta, at rate: Double) -> [Double]? {
+        guard let h = audio(meta.id)?.ir else { return nil }
+        return meta.sampleRate == rate ? h : Processing.resample(h, from: meta.sampleRate, to: rate)
+    }
+
+    func mic(_ id: String?) -> MicCurve? { id.flatMap { i in micCurves.first { $0.id == i } } }
+
+    func importMicCurve() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.plainText, .commaSeparatedText, .text, .data]
+        panel.message = "Choose a mic response file: lines of “frequency dB” (REW .txt, .frd or .csv)"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let text = (try? String(contentsOf: url, encoding: .utf8)) ?? (try? String(contentsOf: url, encoding: .isoLatin1)),
+              let curve = MicCurve.parse(text, name: url.deletingPathExtension().lastPathComponent) else {
+            post(.error, "\(url.lastPathComponent) has no readable “frequency dB” lines.")
+            return
+        }
+        if !isDemo { try? Library.saveMicCurve(curve) }
+        micCurves.append(curve)
+        post(.info, "Imported mic curve “\(curve.name)” (\(curve.points.count) points). Set its polar pattern in Mic Swap.")
+    }
+
+    func updateMicCurve(_ c: MicCurve) {
+        guard let i = micCurves.firstIndex(where: { $0.id == c.id }), !c.builtIn else { return }
+        micCurves[i] = c
+        if !isDemo { try? Library.saveMicCurve(c) }
+    }
+
+    func deleteMicCurve(_ id: String) {
+        guard let c = mic(id), !c.builtIn else { return }
+        micCurves.removeAll { $0.id == id }
+        if !isDemo { Library.deleteMicCurve(id) }
+        if tools.micSourceID == id { tools.micSourceID = "sm57" }
+        if tools.micTargetID == id { tools.micTargetID = nil }
     }
 
     // MARK: - Export

@@ -83,6 +83,12 @@ public enum Processing {
         let fft = FFT(size: n)
         let H = fft.forward(real: h)
         let mag = Complex.power(H.re, H.im).map { sqrt($0) }
+        return Array(minimumPhase(magnitude: mag, fft: fft)[0..<h.count])
+    }
+
+    /// Minimum-phase impulse response (length n) for a full, symmetric magnitude spectrum of length n.
+    public static func minimumPhase(magnitude mag: [Double], fft: FFT) -> [Double] {
+        let n = fft.n
         let floor = (mag.max() ?? 1) * 1e-6               // −120 dB floor keeps log() finite
         let logMag = mag.map { log(max($0, floor)) }
         // Real cepstrum
@@ -98,8 +104,21 @@ public enum Processing {
             let e = exp(cr[k])
             re[k] = e * cos(ci[k]); im[k] = e * sin(ci[k])
         }
-        let out = fft.inverseReal(re, im)
-        return Array(out[0..<h.count])
+        return fft.inverseReal(re, im)
+    }
+
+    /// Linear convolution (FFT), full length a.count + b.count − 1.
+    public static func convolve(_ a: [Double], _ b: [Double]) -> [Double] {
+        guard !a.isEmpty, !b.isEmpty else { return [] }
+        let n = FFT.size(atLeast: a.count + b.count)
+        let fft = FFT(size: n)
+        let A = fft.forward(real: a), B = fft.forward(real: b)
+        var re = [Double](repeating: 0, count: n), im = re
+        for k in 0..<n {
+            re[k] = A.re[k] * B.re[k] - A.im[k] * B.im[k]
+            im[k] = A.re[k] * B.im[k] + A.im[k] * B.re[k]
+        }
+        return Array(fft.inverseReal(re, im)[0..<(a.count + b.count - 1)])
     }
 
     public static func normalizedPeak(_ h: [Double], dBFS: Double = -0.1) -> [Double] {
