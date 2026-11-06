@@ -125,6 +125,8 @@ struct LedReadout: View {
     var body: some View {
         Text(text)
             .font(.system(size: size, weight: .semibold, design: .monospaced))
+            .lineLimit(1)
+            .fixedSize()                 // never wrap or squeeze a readout
             .foregroundStyle(color)
             .shadow(color: color.opacity(0.7), radius: 3)
             .padding(.horizontal, 6)

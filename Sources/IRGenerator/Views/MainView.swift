@@ -147,9 +147,10 @@ struct TransportBar: View {
                             .shadow(color: Theme.gold.opacity(0.7), radius: 3)
                     }
                 }
-                .frame(width: 260, height: 3)
+                .frame(minWidth: 120, maxWidth: 260, minHeight: 3, maxHeight: 3)
             }
-            Spacer()
+            .layoutPriority(-1)
+            Spacer(minLength: 8)
             readout("OUT", meters.outPeak)
             readout("IN", meters.inPeak, hold: meters.inHoldDB)
             if let l = model.latencyMS {
@@ -183,12 +184,13 @@ struct TransportBar: View {
     }
 
     private func readout(_ label: String, _ v: Float, hold: Double? = nil) -> some View {
-        let db = Analysis.dB(Double(v))
-        let clip = (hold ?? db) > -0.2
+        let value = hold ?? Analysis.dB(Double(v))
+        let clip = value > -0.2
         return HStack(spacing: 6) {
             Text(label).font(Theme.caption(9)).tracking(1).foregroundStyle(Theme.dim)
-            HMeter(level: v).frame(width: 120)
-            LedReadout(text: (hold ?? db) <= -99 ? "  −∞  " : String(format: "%5.1f", hold ?? db), color: clip ? Theme.danger : Theme.amber)
+            HMeter(level: v).frame(minWidth: 70, maxWidth: 120)
+            LedReadout(text: value <= -99 ? "   −∞" : String(format: "%5.1f", value), color: clip ? Theme.danger : Theme.amber)
+                .frame(width: 58, alignment: .trailing)
             LedDot(on: clip, color: Theme.danger)
         }
         .help(hold != nil ? "Input peak; the readout holds the highest peak of this run" : "Output peak")

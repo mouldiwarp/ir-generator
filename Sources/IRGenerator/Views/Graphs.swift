@@ -75,7 +75,7 @@ struct FrequencyPlot: View {
                 d += 6
             }
             axisLabel(ctx, "dB", at: CGPoint(x: 4, y: a.minY), anchor: .topLeading, color: Theme.gold.opacity(0.8))
-            axisLabel(ctx, "Hz", at: CGPoint(x: a.minX - 5, y: a.maxY + 5), anchor: .topTrailing, color: Theme.gold.opacity(0.8))
+            axisLabel(ctx, "Hz", at: CGPoint(x: a.minX - 14, y: a.maxY + 5), anchor: .topTrailing, color: Theme.gold.opacity(0.8))
 
             // Curves: compared first, selected (index 0) on top with a glow.
             ctx.clip(to: Path(a))
@@ -106,7 +106,7 @@ struct FrequencyPlot: View {
                     let v = norm[i][k]
                     let pt = CGPoint(x: x(fr[k]), y: y(v))
                     ctx.fill(Path(ellipseIn: CGRect(x: pt.x - 3, y: pt.y - 3, width: 6, height: 6)), with: .color(s.color))
-                    lines.append(String(format: "%+.1f dB", v))
+                    lines.append(abs(v) < 0.05 ? "0.0 dB" : String(format: "%+.1f dB", v))
                 }
                 let tx = h.x + (h.x > a.midX ? -8 : 8)
                 for (j, l) in lines.enumerated() {
@@ -161,7 +161,7 @@ struct ImpulsePlot: View {
                 axisLabel(ctx, stepMS < 1 ? String(format: "%.1f", t) : "\(Int(t.rounded()))", at: CGPoint(x: x(t), y: a.maxY + 5), anchor: .top)
                 t += stepMS
             }
-            axisLabel(ctx, "ms", at: CGPoint(x: a.minX - 5, y: a.maxY + 5), anchor: .topTrailing, color: Theme.gold.opacity(0.8))
+            axisLabel(ctx, "ms", at: CGPoint(x: a.minX - 10, y: a.maxY + 5), anchor: .topTrailing, color: Theme.gold.opacity(0.8))
             if etc {
                 for d in stride(from: 0.0, through: dbFloor, by: -10) {
                     var p = Path(); p.move(to: CGPoint(x: a.minX, y: y(d))); p.addLine(to: CGPoint(x: a.maxX, y: y(d)))
@@ -251,7 +251,7 @@ struct RecordingPlot: View {
                 axisLabel(ctx, step < 1 ? String(format: "%.1f", t) : "\(Int(t))", at: CGPoint(x: x(t), y: a.maxY + 5), anchor: .top)
                 t += step
             }
-            axisLabel(ctx, "s", at: CGPoint(x: a.minX - 5, y: a.maxY + 5), anchor: .topTrailing, color: Theme.gold.opacity(0.8))
+            axisLabel(ctx, "s", at: CGPoint(x: a.minX - 10, y: a.maxY + 5), anchor: .topTrailing, color: Theme.gold.opacity(0.8))
             for (v, l) in [(1.0, "0 dB"), (0.5, "−6"), (0.0, ""), (-0.5, "−6"), (-1.0, "0 dB")] {
                 var p = Path(); p.move(to: CGPoint(x: a.minX, y: y(v))); p.addLine(to: CGPoint(x: a.maxX, y: y(v)))
                 if abs(v) == 1 { ctx.stroke(p, with: .color(Theme.danger.opacity(0.45)), lineWidth: 0.8) } else { gridLine(ctx, p, major: v == 0) }
@@ -294,7 +294,7 @@ struct SpectrogramPlot: View {
                 axisLabel(ctx, step < 1 ? String(format: "%.1f", t) : "\(Int(t))", at: CGPoint(x: xx, y: a.maxY + 5), anchor: .top)
                 t += step
             }
-            axisLabel(ctx, "s", at: CGPoint(x: a.minX - 5, y: a.maxY + 5), anchor: .topTrailing, color: Theme.gold.opacity(0.8))
+            axisLabel(ctx, "s", at: CGPoint(x: a.minX - 10, y: a.maxY + 5), anchor: .topTrailing, color: Theme.gold.opacity(0.8))
             axisLabel(ctx, "Hz", at: CGPoint(x: 4, y: a.minY), anchor: .topLeading, color: Theme.gold.opacity(0.8))
         }
         .accessibilityLabel("Spectrogram of the recording")

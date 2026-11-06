@@ -273,7 +273,7 @@ final class CaptureModel: ObservableObject {
         timer?.invalidate(); timer = nil
         engine.stop()
         state = .idle
-        meters.inPeak = 0; meters.outPeak = 0
+        meters.reset()
     }
 
     private func startTimer() {
@@ -296,7 +296,7 @@ final class CaptureModel: ObservableObject {
         guard s.done, case .capturing(let calibration) = state, let plan = runPlan else { return }
         timer?.invalidate(); timer = nil
         let rec = engine.stop()
-        meters.inPeak = 0; meters.outPeak = 0
+        meters.reset()      // the capture's input peak is kept with the capture (PEAK IN)
         if s.aborted || rec == nil {
             state = .idle
             post(.info, "Capture stopped.")
