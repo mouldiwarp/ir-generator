@@ -148,6 +148,12 @@ final class CaptureModel: ObservableObject {
 
     private func settingsChanged(_ old: AppSettings) {
         if !settings.levelUnlocked && settings.levelDB > AppSettings.lockedCeiling { settings.levelDB = AppSettings.lockedCeiling }
+        // Sweeps average 1–8 runs; noise needs more periods for the same signal-to-noise ratio.
+        if settings.measurement.method != old.measurement.method {
+            let noise = settings.measurement.method != .sweep
+            if noise && settings.measurement.averages < 4 { settings.measurement.averages = 8 }
+            if !noise && settings.measurement.averages > 8 { settings.measurement.averages = 1 }
+        }
         if settings.levelDB != old.levelDB, engine.isRunning, state == .levelCheck { engine.setGain(gain) }
         if settings.levelSignal != old.levelSignal || settings.route != old.route || settings.side != old.side
             || settings.inputChannel != old.inputChannel, state == .levelCheck {
