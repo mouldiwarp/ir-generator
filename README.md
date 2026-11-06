@@ -1,8 +1,25 @@
 # IR Generator
 
-A native Apple silicon app for capturing speaker-cab impulse responses with the IK Multimedia AXE I/O. It exports
-WAV files for **TONEX / AmpliTube** and **Fractal** (Axe-Fx III, FM9, FM3). It uses the same GM Guitars look as
-Axeio Silicon and Mixdeck.
+A native macOS app (Apple silicon) for capturing your own **speaker-cab impulse responses** with the IK Multimedia
+AXE I/O. It drives a power amp from the AXE I/O's **Amp Out**, records the cab through a mic, deconvolves the
+recording into an IR, and exports WAV files ready for **TONEX / AmpliTube** and **Fractal** (Axe-Fx III, FM9, FM3).
+
+![Frequency view](docs/screenshots/frequency.png)
+
+- Log sine sweep or periodic pink/white noise, averaged, with sample-accurate duplex playback and recording
+- Frequency, impulse (waveform / energy-time), raw recording and spectrogram views, with overlays for comparing captures
+- **Align & Blend**: phase-align several mics to a fraction of a sample, then blend them without comb filtering
+- **Mic Swap**: remove the capture mic's colouration (speaker only), or re-voice the IR as another mic
+- One-click export of every length your modellers need, with normalisation, fades, minimum phase and a high cut
+- A library of captures that keeps the raw recording, so any IR can be re-processed or re-exported later
+
+📖 **[User manual (PDF)](docs/IR-Generator-Manual.pdf)**
+
+## Requirements
+
+- macOS 14 or later on Apple silicon
+- An IK Multimedia AXE I/O (any Core Audio duplex interface works with the line outputs; Amp Out is AXE I/O specific)
+- A power amp, a guitar cab and a mic. Xcode command-line tools (Swift 5.9+) to build.
 
 ## Build
 
@@ -36,8 +53,9 @@ Each capture plays the test signal, records the mic, deconvolves and trims the r
 you can re-export it later at any length.
 
 **Latency calibration (optional):** patch Out 1 into Input 2 (LINE), select OUT 1/2 and IN 2, then click
-**Calibrate**. With **Keep mic distance delay** ticked, IRs then keep the mic's time of flight, so several mics on one
-cab stay phase-aligned. Otherwise each IR starts at the direct sound, which is the usual choice for a single-mic IR.
+**Calibrate**. With **Keep mic distance delay** ticked, IRs then keep the mic's time of flight. USB timing varies by
+about ±1 ms between runs, though, so for multi-mic sets **Align & Blend** is more precise. Left unticked, each IR
+starts at the direct sound, which is the usual choice.
 
 ## How it works
 
@@ -68,10 +86,18 @@ directly. Files are named `<name>_<Fractal|TONEX>_<rate>_<length>.wav`.
 ## Views
 
 - **Frequency:** log 20 Hz–20 kHz, with off, 1/12, 1/6 or 1/3-octave smoothing, a hover readout, and overlays of
-  other captures or imported IRs. **Length** previews the response cut to an export length.
+  other captures or imported IRs. The dB scale fits itself to the curves (down to −96 dB). **Length** previews the response cut to an export length.
 - **Impulse:** waveform or energy-time (dB), 5 ms to the full IR, with markers at 1024, 2048, 4096 and 8192 samples.
 - **Recording:** the raw mic signal, with clip lines.
 - **Spectrogram:** the recording on a log-frequency axis. Harmonic distortion shows up as faint lines above the sweep.
+
+## High cut
+
+A guitar speaker puts out very little above about 6–8 kHz, so anything a capture shows up there is mostly mic
+hiss and noise at the edge of the sweep, which a high-gain amp turns into fizz. **High cut** (graph toolbar and
+Export sheet: Off, 16, 12, 10, 8 kHz) applies a 24 dB/octave Butterworth low-pass to exported files and previews it
+on the graphs. It's flat below the cutoff, so 10–12 kHz cleans the top without changing the tone; 6–8 kHz starts to
+dull the pick attack. The stored master IR is never changed.
 
 ## Align & Blend (⌘B)
 
@@ -84,6 +110,8 @@ Shows the selected IR plus the ones you've added to the graph (eye buttons), cho
 
 Save the aligned IRs or the blend as new library entries, then export them as usual. The alignment comes from the
 waveforms, so it gives the best-summing position, not the true distance between the mics.
+
+![Align & Blend](docs/screenshots/align.png)
 
 ## Mic Swap (⌘M)
 
@@ -101,6 +129,8 @@ For accuracy, use **Import curve…** to load a measured or official response ("
 `.frd` or `.csv`) and set its polar pattern. A swap is an estimate: off-axis colouration, comb filtering and
 reflections in the original capture stay in.
 
+![Mic Swap](docs/screenshots/micswap.png)
+
 ## Layout
 
 | Path | Contents |
@@ -111,5 +141,20 @@ reflections in the original capture stay in.
 | `Sources/ircore-tests` | Offline tests: a simulated cab, plus noise and distortion, through the whole pipeline |
 
 Diagnostics:
-- `IRGenerator --snapshot <dir>` renders each graph tab to PNG.
+- `IRGenerator --snapshot <dir>` renders each graph tab and sheet to PNG (used for the screenshots here).
 - `IRGenerator --engine-test` runs the engine silently on the AXE I/O for one second.
+
+## Manual
+
+`docs/IR-Generator-Manual.pdf` is built from `docs/manual.html`:
+
+    ./scripts/build-manual.sh
+
+## Licence
+
+MIT. See [LICENSE](LICENSE). The backdrop photograph (`Assets/atmosphere-bar.jpg`) is GM Guitars artwork and is not
+covered by the licence.
+
+AXE I/O, TONEX and AmpliTube are trademarks of IK Multimedia. Axe-Fx, FM9, FM3, Fractal-Bot and Axe-Edit are
+trademarks of Fractal Audio Systems. Microphone names identify the response curves being approximated. This project
+isn't affiliated with or endorsed by any of these companies.

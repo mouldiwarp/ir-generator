@@ -98,11 +98,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Opens Mic Swap, then Align & Blend, and writes each sheet to PNG.
+    /// Opens Mic Swap, Align & Blend, Export and the checklist in turn, and writes each sheet to PNG.
     private func snapshotSheets(dir: URL) {
         let steps: [(String, @MainActor (CaptureModel) -> Void, @MainActor (CaptureModel) -> Void)] = [
             ("micswap", { $0.showMicSwap = true }, { $0.showMicSwap = false }),
             ("align", { $0.showAlign = true }, { $0.showAlign = false }),
+            ("export", { $0.showExport = true }, { $0.showExport = false }),
+            ("checklist", { $0.showChecklist = true }, { $0.showChecklist = false }),
         ]
         func run(_ i: Int) {
             guard i < steps.count, let model else { exit(0) }

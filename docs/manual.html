@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IR Generator Manual</title>
+<style>
+  @page { size: A4; margin: 18mm 17mm 20mm 17mm; }
+  @page :first { margin: 0; }
+  :root {
+    --ink: #1d1b18; --dim: #6b6458; --gold: #b8913a; --gold-soft: #f4ead3; --line: #e3dccd;
+    --obsidian: #121110; --amber: #e8a33a; --warn: #a8432f;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; font: 10.2pt/1.5 "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--ink); background: #fff; }
+  h1, h2, h3 { font-weight: 700; letter-spacing: .02em; line-height: 1.2; }
+  h1 { font-size: 22pt; margin: 0 0 4mm; padding-bottom: 2.5mm; border-bottom: 1.2pt solid var(--gold); break-after: avoid; }
+  h1 .num { color: var(--gold); margin-right: 3mm; }
+  h2 { font-size: 13pt; margin: 6mm 0 2mm; color: var(--ink); break-after: avoid; }
+  h3 { font-size: 10.5pt; margin: 4mm 0 1mm; text-transform: uppercase; letter-spacing: .1em; color: var(--gold); break-after: avoid; }
+  p { margin: 0 0 2.6mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+  li { margin-bottom: 1.2mm; }
+  code, kbd, .mono { font-family: "SF Mono", Menlo, monospace; font-size: 9pt; }
+  kbd { border: .6pt solid #bdb4a2; border-bottom-width: 1.4pt; border-radius: 3px; padding: 0 4px; background: #faf8f3; }
+  .ui { font-weight: 700; letter-spacing: .04em; font-size: 9pt; text-transform: uppercase; }
+  section.chapter { break-before: page; }
+  figure { margin: 4mm 0 5mm; break-inside: avoid; }
+  figure img { display: block; width: 100%; border-radius: 4px; border: .6pt solid #2a2724; }
+  figure.narrow img { width: 70%; margin: 0 auto; }
+  figure.slim img { width: 60%; margin: 0 auto; }
+  figcaption { font-size: 8.6pt; color: var(--dim); margin-top: 1.6mm; }
+  figcaption b { color: var(--ink); }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; font-size: 9.2pt; break-inside: avoid; }
+  th { text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); border-bottom: 1pt solid var(--gold); padding: 1.5mm 2mm; }
+  td { border-bottom: .5pt solid var(--line); padding: 1.6mm 2mm; vertical-align: top; }
+  .note, .warn, .tip { border-left: 2.5pt solid var(--gold); background: var(--gold-soft); padding: 2.5mm 3.5mm; margin: 3mm 0 4mm; border-radius: 0 3px 3px 0; break-inside: avoid; }
+  .warn { border-left-color: var(--warn); background: #f7e7e2; }
+  .note b:first-child, .warn b:first-child, .tip b:first-child { text-transform: uppercase; letter-spacing: .08em; font-size: 8.4pt; margin-right: 1.5mm; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+  .steps { counter-reset: s; list-style: none; padding-left: 0; }
+  .steps > li { counter-increment: s; position: relative; padding-left: 9mm; margin-bottom: 2.4mm; }
+  .steps > li::before { content: counter(s); position: absolute; left: 0; top: .2mm; width: 6mm; height: 6mm; border-radius: 50%;
+    background: var(--gold); color: #fff; font-weight: 700; font-size: 8.5pt; text-align: center; line-height: 6mm; }
+
+  /* Cover */
+  .cover { height: 297mm; width: 210mm; background: var(--obsidian); color: #efe7d6; position: relative; overflow: hidden; break-after: page; }
+  .cover .photo { position: absolute; inset: 0; background: url(../Assets/atmosphere-bar.jpg) center/cover; opacity: .28; }
+  .cover .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,17,16,.35) 0%, rgba(18,17,16,.85) 55%, #121110 100%); }
+  .cover .inner { position: absolute; left: 20mm; right: 20mm; top: 34mm; }
+  .cover .kicker { color: var(--amber); letter-spacing: .3em; font-size: 9pt; font-weight: 700; text-transform: uppercase; }
+  .cover h1 { border: 0; font-size: 44pt; letter-spacing: .12em; margin: 4mm 0 2mm; color: #f6efe0; padding: 0; }
+  .cover .sub { font-size: 15pt; color: #cdbf9f; margin-bottom: 10mm; }
+  .cover .shot { position: absolute; left: 20mm; right: 20mm; top: 112mm; }
+  .cover .shot img { width: 100%; border-radius: 5px; border: .8pt solid #6d5a33; box-shadow: 0 6mm 14mm rgba(0,0,0,.6); }
+  .cover .foot { position: absolute; left: 20mm; right: 20mm; bottom: 18mm; font-size: 9pt; color: #9d927c; display: flex; justify-content: space-between; }
+  .cover .gold-rule { width: 30mm; height: 1.5pt; background: var(--gold); }
+
+  .toc { list-style: none; padding: 0; columns: 1; }
+  .toc li { display: flex; border-bottom: .5pt dotted #cfc6b3; padding: 1.4mm 0; margin: 0; }
+  .toc li span:first-child { color: var(--gold); width: 9mm; font-weight: 700; }
+  .toc li span:nth-child(2) { flex: 1; }
+  .toc li span:last-child { color: var(--dim); font-size: 9pt; }
+  .diagram { width: 100%; margin: 3mm 0 5mm; }
+</style>
+</head>
+<body>
+
+<!-- ============================== COVER ============================== -->
+<div class="cover">
+  <div class="photo"></div><div class="shade"></div>
+  <div class="inner">
+    <div class="kicker">User Manual · Version 1.0</div>
+    <h1>IR GENERATOR</h1>
+    <div class="sub">Capture your own speaker-cab impulse responses<br>with the AXE I/O, for TONEX, AmpliTube and Fractal.</div>
+    <div class="gold-rule"></div>
+  </div>
+  <div class="shot"><img src="screenshots/frequency.png" alt=""></div>
+  <div class="foot"><span>macOS 14+ · Apple silicon</span><span>Open source · MIT licence</span></div>
+</div>
+
+<!-- ============================== CONTENTS ============================== -->
+<section>
+  <h1>Contents</h1>
+  <ul class="toc">
+    <li><span>1</span><span>What IR Generator does</span><span>Overview, what an IR is</span></li>
+    <li><span>2</span><span>Equipment and wiring</span><span>Signal chain, AXE I/O set-up</span></li>
+    <li><span>3</span><span>Safety</span><span>Levels, feedback, hearing</span></li>
+    <li><span>4</span><span>A tour of the window</span><span>Panels, bars and readouts</span></li>
+    <li><span>5</span><span>Setting up a capture</span><span>Interface, test signal, level, latency</span></li>
+    <li><span>6</span><span>Capturing an IR</span><span>Step by step</span></li>
+    <li><span>7</span><span>Reading the graphs</span><span>Frequency, impulse, recording, spectrogram</span></li>
+    <li><span>8</span><span>The capture library</span><span>Naming, comparing, reprocessing</span></li>
+    <li><span>9</span><span>Exporting for your modellers</span><span>Presets, normalising, high cut</span></li>
+    <li><span>10</span><span>Align &amp; Blend</span><span>Combining several mics</span></li>
+    <li><span>11</span><span>Mic Swap</span><span>Removing or replacing the mic</span></li>
+    <li><span>12</span><span>Loading IRs into TONEX, AmpliTube and Fractal</span><span></span></li>
+    <li><span>13</span><span>Troubleshooting</span><span></span></li>
+    <li><span>14</span><span>Reference</span><span>Shortcuts, files, how it works</span></li>
+  </ul>
+
+  <div class="note"><b>Screenshots</b> The screenshots in this manual come from the app's demo mode
+  (<code>IRGenerator --demo</code>), which fills the library with simulated captures. Your own captures will look
+  similar, but with the character of your cab, mic and room.</div>
+</section>
+
+<!-- ============================== 1 ============================== -->
+<section class="chapter">
+  <h1><span class="num">1</span>What IR Generator does</h1>
+  <p>An <b>impulse response (IR)</b> is a short audio file that describes how something changes a signal, in this
+  case how a guitar speaker, its cabinet, the microphone and its position colour the sound of an amp. Amp modellers
+  such as TONEX, AmpliTube and the Fractal Axe-Fx, FM9 and FM3 use IRs in place of a real cab and mic.</p>
+  <p>IR Generator lets you make your own. It sends a test signal from the AXE I/O's <b>Amp Out</b> into a power amp
+  and your cab, records the result through a mic, and works out the IR mathematically. You can then inspect it,
+  compare it with other captures, combine mics, and export files in the exact formats your modellers expect.</p>
+
+  <h2>Features at a glance</h2>
+  <ul>
+    <li><b>Accurate measurement.</b> Exponential sine sweep (the studio standard) or periodic pink/white noise, with
+      averaging. Playback and recording run in the same audio callback, so they're locked sample for sample.</li>
+    <li><b>Four views.</b> Frequency response, impulse (waveform or energy-time), the raw recording, and a
+      spectrogram. Overlay several captures to compare positions or mics.</li>
+    <li><b>Align &amp; Blend.</b> Phase-align IRs from different mics to a fraction of a sample, then blend them
+      without comb filtering.</li>
+    <li><b>Mic Swap.</b> Remove the capture mic's colouration for a speaker-only IR, or re-voice the capture as
+      another mic.</li>
+    <li><b>One-click export.</b> Every length you need for Fractal and TONEX/AmpliTube in one go, with
+      normalisation, fades, minimum phase and a high cut.</li>
+    <li><b>A safe library.</b> Each capture keeps a full-length master IR and the raw recording, so you can
+      re-process or re-export at any time.</li>
+  </ul>
+
+  <h2>How a capture works</h2>
+  <p>The default test signal is a <b>logarithmic sine sweep</b>: a tone that glides from 20 Hz to 20 kHz over a few
+  seconds. The app records what the mic hears and divides the recording by the sweep in the frequency domain
+  (deconvolution). What's left is the cab's impulse response. A useful property of the log sweep is that the power
+  amp's harmonic distortion ends up <i>before</i> the main impulse in time, where the app trims it off, so the IR
+  describes the cab and not the amp's distortion.</p>
+</section>
+
+<!-- ============================== 2 ============================== -->
+<section class="chapter">
+  <h1><span class="num">2</span>Equipment and wiring</h1>
+  <h2>You will need</h2>
+  <ul>
+    <li>A Mac with Apple silicon running macOS 14 or later.</li>
+    <li>An <b>IK Multimedia AXE I/O</b>. Its <b>Amp Out</b> (outputs 5/6) is designed to drive an amp input; the line
+      outputs 1/2 and 3/4 work too, for a power amp with a line input.</li>
+    <li>A <b>power amp</b> (or the power-amp section / effects-loop return of a valve amp) and the <b>cab</b> to capture.</li>
+    <li>A <b>microphone</b> and an XLR cable. A Shure SM57 is the classic choice; any mic works.</li>
+    <li>Optionally, a short instrument cable for the loopback latency calibration.</li>
+  </ul>
+
+  <h2>Signal chain</h2>
+  <svg class="diagram" viewBox="0 0 700 120" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica Neue, Helvetica, Arial" font-size="12">
+    <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#b8913a"/></marker></defs>
+    <g fill="#121110" stroke="#b8913a" stroke-width="1.2">
+      <rect x="5" y="30" width="120" height="56" rx="6"/><rect x="170" y="30" width="110" height="56" rx="6"/>
+      <rect x="325" y="30" width="100" height="56" rx="6"/><rect x="470" y="30" width="80" height="56" rx="6"/>
+    </g>
+    <g fill="#f3ead6" text-anchor="middle" font-weight="700">
+      <text x="65" y="55">AXE I/O</text><text x="225" y="55">POWER AMP</text><text x="375" y="55">CAB</text><text x="510" y="55">MIC</text>
+    </g>
+    <g fill="#cdbf9f" text-anchor="middle" font-size="10">
+      <text x="65" y="72">AMP OUT (5/6)</text><text x="225" y="72">or loop return</text><text x="375" y="72">speaker</text><text x="510" y="72">SM57 etc.</text>
+    </g>
+    <g stroke="#b8913a" stroke-width="1.6" fill="none" marker-end="url(#a)">
+      <path d="M125 58 H166"/><path d="M280 58 H321"/><path d="M425 58 H466"/>
+      <path d="M550 58 H600 V105 H65 V90"/>
+    </g>
+    <text x="330" y="100" fill="#6b6458" font-size="10.5" text-anchor="middle">XLR into AXE I/O INPUT 1 or 2 (phantom power only for condensers)</text>
+    <text x="146" y="50" fill="#6b6458" font-size="9.5" text-anchor="middle">jack</text>
+    <text x="301" y="50" fill="#6b6458" font-size="9.5" text-anchor="middle">speaker</text>
+    <text x="446" y="50" fill="#6b6458" font-size="9.5" text-anchor="middle">air</text>
+  </svg>
+
+  <h2>Set up the AXE I/O first</h2>
+  <p>Use IK's control panel (or Axeio Silicon) before you capture:</p>
+  <ul>
+    <li><b>To Amp Out: OFF.</b> When it's on, Input 1 is routed straight to Amp Out. With a mic on Input 1 that
+      creates a feedback loop through the cab.</li>
+    <li><b>Direct monitoring down</b> for the mic input, for the same reason.</li>
+    <li><b>Phantom power</b> only if you're using a condenser mic. Dynamic mics and most ribbons don't need it, and
+      some older ribbons can be damaged by it.</li>
+    <li>Set the AXE I/O to <b>48 kHz</b>. The app does this for you when it opens the device.</li>
+  </ul>
+
+  <h2>Mic placement</h2>
+  <p>Start with the mic 2–3 cm from the grille, pointing at the edge of the speaker's dust cap. Moving towards the
+  centre makes it brighter; moving out towards the cone edge makes it darker and warmer. Name each capture after the
+  position (for example "V30 · SM57 cap edge") so you can compare them later.</p>
+</section>
+
+<!-- ============================== 3 ============================== -->
+<section class="chapter">
+  <h1><span class="num">3</span>Safety</h1>
+  <div class="warn"><b>Warning</b> A sine sweep carries full-range energy, including high frequencies that can
+  damage tweeters and your hearing. Always start quiet, wear ear protection near the cab, and never point a
+  compression driver or tweeter at a sweep at high level.</div>
+  <p>IR Generator has several safeguards:</p>
+  <ul>
+    <li><b>Level ceiling.</b> The output level is capped at −12 dBFS. Click the padlock to unlock the full range, and
+      the slider turns red above −12 dBFS.</li>
+    <li><b>Soft starts.</b> Test signals fade in and out, and level changes are smoothed, so there are no clicks.</li>
+    <li><b>Instant stop.</b> <kbd>Esc</kbd> or the Stop button fades the output to silence immediately.</li>
+    <li><b>Checklist.</b> Before the first capture of each session the app asks you to confirm four things.</li>
+  </ul>
+  <figure class="narrow">
+    <img src="screenshots/checklist.png" alt="Before capturing checklist">
+    <figcaption><b>The pre-capture checklist.</b> Clicking Capture opens it until every item is ticked. You can also
+    tick the items in the <span class="ui">Before capturing</span> card in the left column.</figcaption>
+  </figure>
+</section>
+
+<!-- ============================== 4 ============================== -->
+<section class="chapter">
+  <h1><span class="num">4</span>A tour of the window</h1>
+  <figure style="margin-top:2mm">
+    <img src="screenshots/frequency.png" alt="Main window" style="width:88%;margin:0 auto">
+    <figcaption><b>The main window</b>, showing three captures overlaid in the Frequency view.</figcaption>
+  </figure>
+  <table>
+    <tr><th style="width:26%">Area</th><th>What it's for</th></tr>
+    <tr><td><b>Top bar</b></td><td>The connected interface, its sample rate, and a <span class="ui">Demo</span> badge in demo mode.</td></tr>
+    <tr><td><b>Left column</b></td><td>Capture set-up: interface and routing, test signal, output level, the safety checklist, and latency calibration.</td></tr>
+    <tr><td><b>Centre</b></td><td>The graphs, with tabs for <span class="ui">Frequency</span>, <span class="ui">Impulse</span>, <span class="ui">Recording</span> and <span class="ui">Spectrogram</span>. Each tab has its own controls in the second row. The legend and the selected capture's metrics are underneath.</td></tr>
+    <tr><td><b>Right column</b></td><td>The capture library, with <span class="ui">Align</span> and <span class="ui">Import</span> buttons. Underneath it, the <span class="ui">Selected IR</span> card: name, notes, details, and the <span class="ui">Mic Swap</span>, <span class="ui">Save Master</span> and <span class="ui">Export</span> buttons.</td></tr>
+    <tr><td><b>Bottom bar</b></td><td>Status and progress, output and input meters with peak readouts, the measured latency, and the <span class="ui">Level Check</span>, <span class="ui">Capture</span> and <span class="ui">Export</span> buttons.</td></tr>
+  </table>
+  <h3>Metrics under the graph</h3>
+  <table>
+    <tr><td style="width:26%"><b>PNR</b></td><td>Peak-to-noise ratio: how far the IR's peak sits above the noise floor. 70 dB or more is a clean capture. Below 45 dB the app suggests raising the level or adding sweeps.</td></tr>
+    <tr><td><b>Delay</b></td><td>Time from the start of playback to the direct sound arriving: interface latency plus the mic's distance from the speaker.</td></tr>
+    <tr><td><b>Peak in</b></td><td>The highest input level during the capture. Aim for about −12 dBFS. At −0.1 dBFS or above, the app warns that the input clipped.</td></tr>
+    <tr><td><b>Length</b></td><td>Length of the master IR (0.5, 1 or 2 s).</td></tr>
+  </table>
+</section>
+
+<!-- ============================== 5 ============================== -->
+<section class="chapter">
+  <h1><span class="num">5</span>Setting up a capture</h1>
+  <h2>Interface</h2>
+  <table>
+    <tr><td style="width:26%"><span class="ui">Device</span></td><td>Any duplex Core Audio interface. The AXE I/O is selected automatically when connected.</td></tr>
+    <tr><td><span class="ui">Send to</span></td><td><span class="ui">Amp Out</span> (outputs 5/6, instrument level, for an amp input) or <span class="ui">Out 1/2</span>, <span class="ui">Out 3/4</span> (line level, for a line-input power amp or the loopback test).</td></tr>
+    <tr><td><span class="ui">Channel</span></td><td>Left, right or both outputs of the pair.</td></tr>
+    <tr><td><span class="ui">Mic input</span></td><td>The AXE I/O input your mic is plugged into.</td></tr>
+  </table>
+
+  <h2>Test signal</h2>
+  <table>
+    <tr><td style="width:26%"><span class="ui">Sine sweep</span></td><td>The most accurate method, and the default. Choose the <b>length</b> (2–10 s; longer gives more signal-to-noise) and the number of <b>sweeps</b> to average (×1 to ×8).</td></tr>
+    <tr><td><span class="ui">Pink / White noise</span></td><td>A repeating noise burst, averaged over 4–32 periods. Useful in noisy rooms or as a cross-check. Pink is gentler on tweeters.</td></tr>
+    <tr><td><span class="ui">Range</span></td><td>The frequency range of the test signal, 20 Hz–20 kHz by default.</td></tr>
+    <tr><td><span class="ui">Master IR</span></td><td>How much of the IR to keep in the library: 500 ms, 1 s or 2 s. Exports are cut from this.</td></tr>
+    <tr><td><span class="ui">High-pass at 20 Hz</span></td><td>Removes DC offset and sub-sonic rumble. Leave it on.</td></tr>
+  </table>
+
+  <h2>Output level and level check</h2>
+  <p>The slider sets the level of the test signal leaving the AXE I/O. Click <span class="ui">Level Check</span>
+  (<kbd>⌘L</kbd>) to play looped pink noise or a 1 kHz tone, then:</p>
+  <ol class="steps">
+    <li>Bring the power amp up from zero to a moderate playing volume.</li>
+    <li>Turn the AXE I/O's mic gain until the <b>IN</b> meter peaks around <b>−12 dBFS</b>. The peak readout holds for 1.5 s, then follows the level down.</li>
+    <li>Stop the level check. The sweep runs at the same level.</li>
+  </ol>
+
+  <h2>Latency &amp; alignment (optional)</h2>
+  <p>To measure the interface's round-trip latency, patch <b>Out 1</b> into <b>Input 2</b> (set to LINE), choose
+  <span class="ui">Out 1/2</span> and <span class="ui">In 2</span>, and click <span class="ui">Calibrate</span>.
+  With <span class="ui">Keep mic distance delay</span> ticked, IRs then keep the mic's time of flight.</p>
+  <div class="tip"><b>Tip</b> USB timing varies by about ±1 ms between runs, which is too coarse for blending mics
+  precisely. For most work leave <span class="ui">Keep mic distance delay</span> off, so each IR starts at the direct
+  sound, and use <b>Align &amp; Blend</b> to line up mics afterwards.</div>
+</section>
+
+<!-- ============================== 6 ============================== -->
+<section class="chapter">
+  <h1><span class="num">6</span>Capturing an IR</h1>
+  <ol class="steps">
+    <li>Wire up as in chapter 2 and set the AXE I/O as described there.</li>
+    <li>In the left column, choose <span class="ui">Amp Out</span>, the channel, and the mic input.</li>
+    <li>Run a <span class="ui">Level Check</span> and set the power amp and mic gain (chapter 5).</li>
+    <li>Click <span class="ui">Capture</span> (<kbd>⌘R</kbd>). If the checklist isn't complete, tick it in the sheet that opens and click <span class="ui">Capture</span> there.</li>
+    <li>Stay quiet while the sweep plays. The status bar shows progress and time remaining. <kbd>Esc</kbd> stops at any time.</li>
+    <li>The new capture appears at the top of the library and is selected. Give it a name and notes (mic, position, amp settings).</li>
+    <li>Check the result: a clean single spike in the <span class="ui">Impulse</span> view, a sensible curve in <span class="ui">Frequency</span>, and a PNR of 70 dB or more.</li>
+  </ol>
+  <div class="note"><b>Loopback test</b> To check the app and interface on their own, patch Amp Out (or Out 1) straight
+  into an input, choose that route and run a capture at a low level. The frequency response should be flat within
+  about ±0.5 dB from 20 Hz to 20 kHz, with a single clean spike in the impulse view.</div>
+  <h2>If a capture looks wrong</h2>
+  <ul>
+    <li><b>Noisy or low PNR:</b> raise the level, use a longer sweep, or average more sweeps.</li>
+    <li><b>Clipping warning:</b> turn the mic gain down and capture again.</li>
+    <li><b>Strange start to the impulse</b> with <span class="ui">Keep mic distance delay</span> on: the latency moved since calibration. The app falls back to trimming at the direct sound and says so. Right-click the capture and choose <span class="ui">Reprocess from Recording</span> after changing settings.</li>
+  </ul>
+</section>
+
+<!-- ============================== 7 ============================== -->
+<section class="chapter">
+  <h1><span class="num">7</span>Reading the graphs</h1>
+  <p>The graphs show the selected capture plus any others whose <b>eye</b> button is on in the library, each in its
+  own colour. Hover over a graph for an exact readout.</p>
+
+  <h2>Frequency</h2>
+  <p>The magnitude response on a logarithmic scale from 20 Hz to 20 kHz. Each curve is scaled so its loudest point
+  between 40 Hz and 12 kHz sits at 0 dB, so captures at different levels are easy to compare, and the dB scale
+  fits itself to the curves. <span class="ui">Smooth</span> averages over 1/12, 1/6 or 1/3 of an octave;
+  <span class="ui">High cut</span> previews the export filter (chapter 9); <span class="ui">Length</span> shows the
+  response as it will be after cutting to an export length. Short IRs lose low-end detail, and this shows how much.</p>
+  <p>A typical guitar cab rises from the low end to a peak around 80–120 Hz, has presence peaks between 2 and 5 kHz,
+  and falls steeply above 5–6 kHz. The wiggles in the upper mids are the speaker's cone breakup, part of its character.</p>
+
+  <h2>Impulse</h2>
+  <figure>
+    <img src="screenshots/impulse.png" alt="Impulse view">
+    <figcaption><b>Impulse view</b>, waveform, first 50 ms. The dashed lines show where 1024- and 2048-sample exports end.</figcaption>
+  </figure>
+  <p><span class="ui">Waveform</span> shows the IR itself; <span class="ui">Energy (dB)</span> shows its decay on a
+  log scale, which makes the noise floor and late resonances visible. The span buttons zoom from 5 ms to the whole IR.</p>
+</section>
+
+<section class="chapter">
+  <h2 style="margin-top:0">Recording</h2>
+  <figure>
+    <img src="screenshots/recording.png" alt="Recording view">
+    <figcaption><b>Recording view</b>: the raw mic signal for the capture, with the clip level marked.</figcaption>
+  </figure>
+  <p>Use this to check the level was sensible and nothing unexpected (a door slam, a car) happened during the sweep.</p>
+  <h2>Spectrogram</h2>
+  <figure>
+    <img src="screenshots/spectrogram.png" alt="Spectrogram view">
+    <figcaption><b>Spectrogram</b> of the recording: time across, frequency up, brightness for level.</figcaption>
+  </figure>
+  <p>The bright rising line is the sweep. Fainter lines above it are harmonic distortion from the power amp or
+  speaker; the deconvolution moves these ahead of the IR and they're trimmed away. Horizontal lines that run through
+  the whole recording are hum or background noise.</p>
+</section>
+
+<!-- ============================== 8 ============================== -->
+<section class="chapter">
+  <h1><span class="num">8</span>The capture library</h1>
+  <p>Every capture is saved automatically, with a 32-bit float master IR, the raw recording and its settings. The
+  library survives relaunches, and you can re-export any capture with different settings later.</p>
+  <ul>
+    <li><b>Select</b> a capture to show it in gold and fill the <span class="ui">Selected IR</span> card. Edit its name and notes there.</li>
+    <li><b>Eye</b> button: add the capture to the graphs to compare it with the selected one.</li>
+    <li><span class="ui">Import</span> (<kbd>⌘I</kbd>): load WAV IRs from elsewhere (commercial IRs, for example) to compare with your own.</li>
+    <li>Labels show <span class="ui">Imported</span> IRs and <span class="ui">Processed</span> ones (aligned, blended or mic-swapped). Processed IRs remember the capture they came from.</li>
+  </ul>
+  <h3>Right-click menu</h3>
+  <table>
+    <tr><td style="width:34%"><span class="ui">Export…</span></td><td>Open the export sheet for this capture.</td></tr>
+    <tr><td><span class="ui">Save Master…</span></td><td>Save the full-length 32-bit float IR as a WAV.</td></tr>
+    <tr><td><span class="ui">Reprocess from Recording</span></td><td>Rebuild the IR from the raw recording with the current settings (high-pass, keep delay, master length).</td></tr>
+    <tr><td><span class="ui">Save Raw Recording…</span></td><td>Save the mic recording, for example to process in other software.</td></tr>
+    <tr><td><span class="ui">Show Original</span></td><td>For processed IRs, select the capture it was made from.</td></tr>
+    <tr><td><span class="ui">Delete</span></td><td>Remove the capture and its files.</td></tr>
+  </table>
+</section>
+
+<!-- ============================== 9 ============================== -->
+<section class="chapter">
+  <h1><span class="num">9</span>Exporting for your modellers</h1>
+  <figure class="slim">
+    <img src="screenshots/export.png" alt="Export sheet">
+    <figcaption><b>The Export sheet</b> (<kbd>⌘E</kbd>). Tick every format you need; one click writes them all.</figcaption>
+  </figure>
+  <table>
+    <tr><th>Preset</th><th>Rate</th><th>Length</th><th>Use</th></tr>
+    <tr><td>Fractal Standard</td><td>48 kHz</td><td>1024 (21 ms)</td><td>Axe-Fx III, FM9, FM3 standard IR slots</td></tr>
+    <tr><td>Fractal 2048</td><td>48 kHz</td><td>2048 (43 ms)</td><td>More low-end detail</td></tr>
+    <tr><td>Fractal UltraRes</td><td>48 kHz</td><td>8192 (171 ms)</td><td>Axe-Fx III / FM9 UltraRes</td></tr>
+    <tr><td>TONEX / AmpliTube</td><td>48 kHz</td><td>2048 · 4096 · 8192 · 500 ms</td><td>4096 is a good default</td></tr>
+    <tr><td>TONEX / AmpliTube</td><td>44.1 kHz</td><td>4096</td><td>Sessions at 44.1 kHz</td></tr>
+  </table>
+  <p>All exports are mono 24-bit WAV, named <code>&lt;name&gt;_&lt;Fractal|TONEX&gt;_&lt;rate&gt;_&lt;length&gt;.wav</code>.</p>
+  <h3>Processing options</h3>
+  <table>
+    <tr><td style="width:26%"><span class="ui">Normalise</span></td><td><b>Peak −0.1 dB</b> (the loudest sample just below full scale, the usual choice), <b>Matched RMS</b> (every IR at the same loudness, good for A/B comparison in a modeller), or <b>None</b>.</td></tr>
+    <tr><td><span class="ui">Fade out</span></td><td>Length of the half-Hann fade at the end of each file (5, 10 or 20%), so cutting the IR short doesn't click.</td></tr>
+    <tr><td><span class="ui">High cut</span></td><td>A 24 dB/octave low-pass. See below.</td></tr>
+    <tr><td><span class="ui">Minimum phase</span></td><td>Moves all the energy to the start of the IR without changing its tone. Short IRs keep more low end, but the timing between mics is lost, so don't use it on IRs you'll blend.</td></tr>
+  </table>
+  <h3>Should I use the high cut?</h3>
+  <p>Usually, yes, set gently. A guitar speaker puts out very little above about 6–8 kHz. What the capture shows up
+  there is mostly mic hiss and noise at the edge of the sweep, which a high-gain amp turns into fizz. The filter is
+  flat below its cutoff, so <b>10–12 kHz</b> cleans the top without changing the tone. <b>8 kHz</b> and below starts
+  to dull the pick attack. The master IR in the library is never changed, so try a few settings and compare by ear.</p>
+</section>
+
+<!-- ============================== 10 ============================== -->
+<section class="chapter">
+  <h1><span class="num">10</span>Align &amp; Blend</h1>
+  <p>Blending two mics (for example an SM57 and a ribbon) is a classic way to build a fuller cab sound. If the two
+  IRs are even a fraction of a millisecond apart, though, they cancel at some frequencies and sound thin and phasey
+  (comb filtering). Align &amp; Blend lines them up first.</p>
+  <figure>
+    <img src="screenshots/align.png" alt="Align and Blend">
+    <figcaption><b>Align &amp; Blend</b> (<kbd>⌘B</kbd>). Gold: the blend after alignment. Red dashed: the blend as captured.</figcaption>
+  </figure>
+  <ol class="steps">
+    <li>Select one capture and turn on the <b>eye</b> of each IR you want to blend with it, then click <span class="ui">Align</span> in the library header.</li>
+    <li>Choose the <span class="ui">Reference</span>. The others are shifted to match it. <span class="ui">Shift</span> shows how far, to a hundredth of a sample, and <span class="ui">Match</span> how similar the two are.</li>
+    <li>Check polarity. An IR that's upside down (a ribbon's back side, for example) is detected and flipped; the <span class="ui">Ø</span> button overrides it.</li>
+    <li>With two IRs, set the <span class="ui">Mix</span>. The graph shows the blend before and after alignment.</li>
+    <li><span class="ui">Save Blend</span> adds the blend to the library; <span class="ui">Save Aligned IRs</span> saves the shifted IRs individually, for blending in a modeller with two IR slots.</li>
+  </ol>
+  <div class="note"><b>Note</b> Alignment works from the waveforms, between 80 Hz and 4 kHz, so it finds the
+  position where the mics sum best rather than their physical distance. That's what you want for a blend.</div>
+</section>
+
+<!-- ============================== 11 ============================== -->
+<section class="chapter">
+  <h1><span class="num">11</span>Mic Swap</h1>
+  <p>Every mic colours the sound. Mic Swap divides out the capture mic's frequency response to leave the speaker on
+  its own, or replaces it with another mic's response.</p>
+  <figure class="narrow">
+    <img src="screenshots/micswap.png" alt="Mic Swap">
+    <figcaption><b>Mic Swap</b> (<kbd>⌘M</kbd>): an SM57 capture re-voiced as a Royer R-121 at 15 cm. The lower graph shows the correction filter.</figcaption>
+  </figure>
+  <ol class="steps">
+    <li>Select a capture and click <span class="ui">Mic Swap…</span>.</li>
+    <li><span class="ui">Captured with</span>: the mic you used. <span class="ui">Replace with</span>: the target mic, or <b>Flat</b> for a speaker-only IR.</li>
+    <li>Set the <span class="ui">Distance</span> from the grille. Directional mics boost bass when close (the proximity effect), and the app models this for both mics.</li>
+    <li>Set the <span class="ui">Max boost</span>. Large boosts also raise noise; +6 dB is a safe start.</li>
+    <li>Compare the result with the original, then <span class="ui">Save as New IR</span>.</li>
+  </ol>
+  <p>Built-in curves: SM57, MD 421, e906, i5, RE20, SM7B (dynamic); R-121, M 160 (ribbon); C414, U 87 (condenser); and
+  flat. They're smoothed approximations of published on-axis responses, not manufacturer data. For better accuracy,
+  click <span class="ui">Import Curve…</span> and load a measured or official response as a text, REW, <code>.frd</code>
+  or <code>.csv</code> file of frequency and dB pairs.</p>
+  <div class="note"><b>Limits</b> A swap is an estimate. It corrects the on-axis tone, but off-axis colouration,
+  comb filtering and room reflections in the original capture stay in. It's no substitute for capturing with the
+  real mic, but it's a fast way to explore.</div>
+</section>
+
+<!-- ============================== 12 ============================== -->
+<section class="chapter">
+  <h1><span class="num">12</span>Loading IRs into TONEX, AmpliTube and Fractal</h1>
+  <h2>TONEX and AmpliTube</h2>
+  <p>TONEX (software and pedal, via the TONEX editor) and AmpliTube 5 load standard WAV IRs directly in their cab /
+  IR sections. Use the <b>TONEX / AmpliTube</b> presets, 4096 samples at 48 kHz unless you have a reason to change it.
+  Choose the 44.1 kHz version only if your session or host runs at 44.1 kHz.</p>
+  <h2>Fractal Axe-Fx III, FM9 and FM3</h2>
+  <p>Import the WAVs with <b>Fractal-Bot</b> or <b>Axe-Edit III</b>, which convert them to the unit's own format
+  and store them in a user cab slot. Export <b>1024</b> for the standard slots, <b>2048</b> where supported, and
+  <b>8192 UltraRes</b> for UltraRes slots on the Axe-Fx III and FM9.</p>
+  <div class="tip"><b>Tip</b> When auditioning several IRs in a modeller, export them with <b>Matched RMS</b>
+  normalisation so louder isn't mistaken for better.</div>
+</section>
+
+<!-- ============================== 13 ============================== -->
+<section class="chapter">
+  <h1><span class="num">13</span>Troubleshooting</h1>
+  <table>
+    <tr><th style="width:34%">Problem</th><th>What to try</th></tr>
+    <tr><td>No audio device, or the AXE I/O isn't listed</td><td>Check the USB connection and that macOS sees the AXE I/O in Audio MIDI Setup. The device list refreshes on its own.</td></tr>
+    <tr><td>Input meter doesn't move</td><td>Allow microphone access in System Settings › Privacy &amp; Security › Microphone. Check the mic input selection and the AXE I/O gain, and phantom power for condensers.</td></tr>
+    <tr><td>Capture button does nothing</td><td>The safety checklist isn't complete: tick the items in the sheet or in the <span class="ui">Before capturing</span> card.</td></tr>
+    <tr><td>Howling or feedback</td><td>Press <kbd>Esc</kbd>. Turn <b>To Amp Out</b> off and direct monitoring down on the AXE I/O.</td></tr>
+    <tr><td>Low PNR, hissy IR</td><td>Raise the output level (and power-amp volume), use a longer sweep or more sweeps, and reduce room noise. A 10–12 kHz high cut on export also helps.</td></tr>
+    <tr><td>Clipping warning</td><td>Turn the mic gain down so the input peaks around −12 dBFS.</td></tr>
+    <tr><td>The impulse looks cut off at the start</td><td>Turn off <span class="ui">Keep mic distance delay</span> (or recalibrate), then use <span class="ui">Reprocess from Recording</span>.</td></tr>
+    <tr><td>Blend sounds thin or phasey</td><td>Use Align &amp; Blend, and check polarity. Don't export IRs for blending as minimum phase.</td></tr>
+  </table>
+</section>
+
+<!-- ============================== 14 ============================== -->
+<section class="chapter">
+  <h1><span class="num">14</span>Reference</h1>
+  <div class="two">
+    <div>
+      <h3>Keyboard shortcuts</h3>
+      <table>
+        <tr><td><kbd>⌘R</kbd></td><td>Capture</td></tr>
+        <tr><td><kbd>⌘L</kbd></td><td>Level check</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Stop</td></tr>
+        <tr><td><kbd>⌘E</kbd></td><td>Export the selected IR</td></tr>
+        <tr><td><kbd>⌘B</kbd></td><td>Align &amp; Blend</td></tr>
+        <tr><td><kbd>⌘M</kbd></td><td>Mic Swap</td></tr>
+        <tr><td><kbd>⌘I</kbd></td><td>Import WAV IRs</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>Where files are kept</h3>
+      <p><code>~/Library/Application Support/IR Generator/</code></p>
+      <ul>
+        <li><code>Captures/&lt;id&gt;/meta.json</code>: settings, name, notes</li>
+        <li><code>Captures/&lt;id&gt;/ir.wav</code>: master IR, 32-bit float</li>
+        <li><code>Captures/&lt;id&gt;/recording.wav</code>: raw mic recording</li>
+        <li><code>Mics/</code>: imported mic curves</li>
+      </ul>
+      <p>Exports go to <code>~/Documents/Impulse Responses</code> unless you choose another folder.</p>
+    </div>
+  </div>
+
+  <h3>How it works</h3>
+  <table>
+    <tr><td style="width:26%"><b>Sweep</b></td><td>Exponential sine sweep (Farina): x(t) = sin(2π f₁ L (e<sup>t/L</sup> − 1)), L = T / ln(f₂/f₁), with faded ends and averaging.</td></tr>
+    <tr><td><b>Noise</b></td><td>Band-limited periodic pink or white noise, one 2¹⁶-sample period built in the frequency domain, synchronously averaged and deconvolved circularly.</td></tr>
+    <tr><td><b>Deconvolution</b></td><td>H = Y·X* / (|X|² + ε(f)), double-precision FFT. ε is tiny in band and rises over a third of an octave outside it, so out-of-band noise isn't amplified.</td></tr>
+    <tr><td><b>Trimming</b></td><td>Onset at the first sample within −20 dB of the peak; 0.2 ms kept before it and faded in. Optional 20 Hz 2nd-order Butterworth high-pass.</td></tr>
+    <tr><td><b>Audio engine</b></td><td>One Core Audio IOProc, written in C, plays and records in the same callback: the recording is sample-aligned with playback and the audio thread never runs Swift.</td></tr>
+    <tr><td><b>Export</b></td><td>Optional minimum phase (real cepstrum), Kaiser windowed-sinc resampling with gain preserved, optional 4th-order Butterworth high cut, half-Hann fade, normalisation.</td></tr>
+    <tr><td><b>Alignment</b></td><td>Cross-correlation band-limited to 80 Hz–4 kHz over ±5 ms, parabolic sub-sample peak, polarity from the peak's sign, fractional shift by FFT phase ramp.</td></tr>
+    <tr><td><b>Mic Swap</b></td><td>Minimum-phase correction FIR from the dB ratio of the two mic curves, with each pattern's proximity effect at the set distance, limited boost and cut, faded to 0 dB below 35 Hz and above 16 kHz.</td></tr>
+  </table>
+
+  <h3>Licence and trademarks</h3>
+  <p>IR Generator is open source under the MIT licence. The backdrop photograph is GM Guitars artwork and is not
+  covered by the licence. AXE I/O, TONEX and AmpliTube are trademarks of IK Multimedia. Axe-Fx, FM9, FM3, Fractal-Bot
+  and Axe-Edit are trademarks of Fractal Audio Systems. Microphone names identify the response curves being
+  approximated. This project isn't affiliated with or endorsed by any of these companies.</p>
+</section>
+
+</body>
+</html>
