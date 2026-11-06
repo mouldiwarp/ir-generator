@@ -28,6 +28,15 @@ struct LibraryPanel: View {
                     }
                     .buttonStyle(.plain)
                     .help("Import WAV IRs to view and compare (⌘I)")
+                    Button { model.openExport(.all) } label: {
+                        Image(systemName: "square.and.arrow.down.on.square").font(.system(size: 10, weight: .semibold))
+                            .frame(width: 24, height: 18)
+                            .background(LampFace(on: false))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(model.captures.isEmpty)
+                    .help("Export every capture in one go (⇧⌘E)")
+                    .accessibilityLabel("Export all captures")
                 }
                 ScrollView {
                     LazyVStack(spacing: 4) {
@@ -93,7 +102,8 @@ struct LibraryPanel: View {
         .contentShape(Rectangle())
         .onTapGesture { model.selectedID = m.id }
         .contextMenu {
-            Button("Export…") { model.selectedID = m.id; model.showExport = true }
+            Button("Export…") { model.selectedID = m.id; model.openExport(.selected) }
+            Button("Export All…") { model.openExport(.all) }
             Button("Save Master WAV…") { model.saveMaster(m) }
             if m.hasRecording {
                 Button("Reprocess from Recording") { model.reprocess(m) }
@@ -138,7 +148,7 @@ struct DetailCard: View {
                     .help("Remove the capture mic's response, or swap it for another mic's (⌘M)")
                 LatchButton(title: "SAVE MASTER", on: false, height: 24) { model.saveMaster(meta) }
             }
-            LatchButton(title: "EXPORT…", on: true, height: 24) { model.showExport = true }
+            LatchButton(title: "EXPORT…", on: true, height: 24) { model.openExport(.selected) }
         }
     }
 

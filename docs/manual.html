@@ -364,8 +364,8 @@
 <section class="chapter">
   <h1><span class="num">9</span>Exporting for your modellers</h1>
   <figure class="slim">
-    <img src="screenshots/export.png" alt="Export sheet">
-    <figcaption><b>The Export sheet</b> (<kbd>⌘E</kbd>). Tick every format you need; one click writes them all.</figcaption>
+    <img src="screenshots/export-all.png" alt="Export sheet">
+    <figcaption><b>The Export sheet</b> (<kbd>⌘E</kbd>), here exporting the whole library by platform. Tick every format you need; one click writes them all.</figcaption>
   </figure>
   <table>
     <tr><th>Preset</th><th>Rate</th><th>Length</th><th>Use</th></tr>
@@ -376,6 +376,16 @@
     <tr><td>TONEX / AmpliTube</td><td>44.1 kHz</td><td>4096</td><td>Sessions at 44.1 kHz</td></tr>
   </table>
   <p>All exports are mono 24-bit WAV, named <code>&lt;name&gt;_&lt;Fractal|TONEX&gt;_&lt;rate&gt;_&lt;length&gt;.wav</code>.</p>
+  <h3>Exporting everything at once</h3>
+  <p>The <span class="ui">Export</span> row at the top of the sheet sets what's exported: <span class="ui">This IR</span>,
+  <span class="ui">On graph</span> (every IR whose eye is on) or <span class="ui">All</span>. Open it straight in
+  <span class="ui">All</span> with <kbd>⇧⌘E</kbd>, <span class="ui">Export All…</span> in a capture's right-click menu,
+  or the export-all button in the library header. A batch writes every ticked preset for every IR, using the same
+  processing options. <span class="ui">Folders</span> chooses <span class="ui">One folder</span>,
+  <span class="ui">By platform</span> (<code>Fractal/</code> and <code>TONEX/</code>, ready to drag into each editor) or
+  <span class="ui">By capture</span>. Files are named after each capture; captures that share a name get
+  <code>_2</code>, <code>_3</code>… so nothing in the batch overwrites anything else. Imported IRs are left out unless
+  you tick <span class="ui">Include imported IRs</span>.</p>
   <h3>Processing options</h3>
   <table>
     <tr><td style="width:26%"><span class="ui">Normalise</span></td><td><b>Peak −0.1 dB</b> (the loudest sample just below full scale, the usual choice), <b>Matched RMS</b> (every IR at the same loudness, good for A/B comparison in a modeller), or <b>None</b>.</td></tr>
@@ -458,6 +468,7 @@
     <tr><th style="width:34%">Problem</th><th>What to try</th></tr>
     <tr><td>No audio device, or the AXE I/O isn't listed</td><td>Check the USB connection and that macOS sees the AXE I/O in Audio MIDI Setup. The device list refreshes on its own.</td></tr>
     <tr><td>Input meter doesn't move</td><td>Allow microphone access in System Settings › Privacy &amp; Security › Microphone. Check the mic input selection and the AXE I/O gain, and phantom power for condensers.</td></tr>
+    <tr><td>A batch export is missing an IR</td><td>Imported IRs are only included in <span class="ui">All</span> when <span class="ui">Include imported IRs</span> is ticked. <span class="ui">On graph</span> only covers IRs whose eye is on.</td></tr>
     <tr><td>Capture button does nothing</td><td>The safety checklist isn't complete: tick the items in the sheet or in the <span class="ui">Before capturing</span> card.</td></tr>
     <tr><td>Howling or feedback</td><td>Press <kbd>Esc</kbd>. Turn <b>To Amp Out</b> off and direct monitoring down on the AXE I/O.</td></tr>
     <tr><td>Low PNR, hissy IR</td><td>Raise the output level (and power-amp volume), use a longer sweep or more sweeps, and reduce room noise. A 10–12 kHz high cut on export also helps.</td></tr>
@@ -478,6 +489,7 @@
         <tr><td><kbd>⌘L</kbd></td><td>Level check</td></tr>
         <tr><td><kbd>Esc</kbd></td><td>Stop</td></tr>
         <tr><td><kbd>⌘E</kbd></td><td>Export the selected IR</td></tr>
+        <tr><td><kbd>⇧⌘E</kbd></td><td>Export all captures</td></tr>
         <tr><td><kbd>⌘B</kbd></td><td>Align &amp; Blend</td></tr>
         <tr><td><kbd>⌘M</kbd></td><td>Mic Swap</td></tr>
         <tr><td><kbd>⌘I</kbd></td><td>Import WAV IRs</td></tr>

@@ -10,7 +10,7 @@ recording into an IR, and exports WAV files ready for **TONEX / AmpliTube** and 
 - Frequency, impulse (waveform / energy-time), raw recording and spectrogram views, with overlays for comparing captures
 - **Align & Blend**: phase-align several mics to a fraction of a sample, then blend them without comb filtering
 - **Mic Swap**: remove the capture mic's colouration (speaker only), or re-voice the IR as another mic
-- One-click export of every length your modellers need, with normalisation, fades, minimum phase and a high cut
+- One-click export of every length your modellers need, for one IR or the whole library, with normalisation, fades, minimum phase and a high cut
 - A library of captures that keeps the raw recording, so any IR can be re-processed or re-exported later
 
 📖 **[User manual (PDF)](docs/IR-Generator-Manual.pdf)**
@@ -82,6 +82,11 @@ starts at the direct sound, which is the usual choice.
 
 Fractal-Bot and Axe-Edit III convert the WAVs to the unit's format on import. TONEX and AmpliTube load the WAVs
 directly. Files are named `<name>_<Fractal|TONEX>_<rate>_<length>.wav`.
+
+**Batch export (⇧⌘E).** In the Export sheet, choose **This IR**, **On graph** (every IR with its eye on) or **All**.
+A batch writes every ticked preset for every IR, in one folder, in `Fractal/` and `TONEX/` folders, or in a folder
+per capture. Files are named after each capture, and captures that share a name get `_2`, `_3`… so nothing is
+overwritten. Imported IRs are left out of **All** unless you tick **Include imported IRs**.
 
 ## Views
 

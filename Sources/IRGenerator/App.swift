@@ -25,7 +25,9 @@ struct IRGeneratorApp: App {
                 Divider()
                 Button("Calibrate Latency (Loopback)") { model.calibrateLatency() }
                 Divider()
-                Button("Export…") { model.showExport = true }.keyboardShortcut("e").disabled(model.selected == nil)
+                Button("Export…") { model.openExport(.selected) }.keyboardShortcut("e").disabled(model.selected == nil)
+                Button("Export All…") { model.openExport(.all) }.keyboardShortcut("e", modifiers: [.command, .shift])
+                    .disabled(model.captures.isEmpty)
             }
             CommandMenu("Tools") {
                 Button("Align & Blend…") { model.showAlign = true }.keyboardShortcut("b").disabled(model.plotted.count < 2)
@@ -103,7 +105,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let steps: [(String, @MainActor (CaptureModel) -> Void, @MainActor (CaptureModel) -> Void)] = [
             ("micswap", { $0.showMicSwap = true }, { $0.showMicSwap = false }),
             ("align", { $0.showAlign = true }, { $0.showAlign = false }),
-            ("export", { $0.showExport = true }, { $0.showExport = false }),
+            ("export", { $0.openExport(.selected) }, { $0.showExport = false }),
+            ("export-all", { $0.openExport(.all) }, { $0.showExport = false }),
             ("checklist", { $0.showChecklist = true }, { $0.showChecklist = false }),
         ]
         func run(_ i: Int) {

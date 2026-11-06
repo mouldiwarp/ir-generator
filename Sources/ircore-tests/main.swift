@@ -191,6 +191,24 @@ do {
     check("settings saved before high cut still load", old.highCut == 0)
 }
 
+print("Batch export paths")
+do {
+    check("names: punctuation runs collapse", ExportRenderer.sanitize("V30 · SM57 cap edge") == "V30_SM57_cap_edge",
+          ExportRenderer.sanitize("V30 · SM57 cap edge"))
+    check("names: empty becomes IR", ExportRenderer.sanitize(" · ") == "IR")
+    let ps = [ExportPreset.all[1], ExportPreset.all[4]]   // Fractal 2048, TONEX 4096
+    let flat = ExportRenderer.batchPaths(names: ["V30 · SM57", "V30 · SM57", "Greenback"], presets: ps, layout: .flat)
+    check("batch: one path per capture and preset", flat.count == 3 && flat.allSatisfy { $0.count == 2 })
+    check("batch: duplicate names don't overwrite", Set(flat.joined().map { $0.lowercased() }).count == 6, "\(flat)")
+    check("batch: second duplicate gets _2", flat[1][0].hasPrefix("V30_SM57_2_Fractal"), flat[1][0])
+    let plat = ExportRenderer.batchPaths(names: ["A"], presets: ps, layout: .byPlatform)
+    check("batch: by-platform folders", plat[0] == ["Fractal/A_Fractal_48k_2048.wav", "TONEX/A_TONEX_48k_4096.wav"], "\(plat)")
+    let cap = ExportRenderer.batchPaths(names: ["A"], presets: ps, layout: .byCapture)
+    check("batch: by-capture folders", cap[0].allSatisfy { $0.hasPrefix("A/") }, "\(cap)")
+    let tricky = ExportRenderer.batchPaths(names: ["Cab", "Cab", "Cab_2"], presets: [ps[0]], layout: .flat).joined()
+    check("batch: user name matching a generated suffix stays unique", Set(tricky.map { $0.lowercased() }).count == 3, "\(tricky)")
+}
+
 print("Export")
 do {
     var opts = ExportOptions()
@@ -203,7 +221,7 @@ do {
     let mp = ExportRenderer.render(cab, masterRate: fs, preset: ExportPreset.all[0], options: opts)
     check("minimum-phase export", mp.count == 1024 && mp.allSatisfy { $0.isFinite })
     check("file suffixes", ExportPreset.all[0].fileSuffix == "48k_1024" && ExportPreset.all.last!.fileSuffix == "44k1_4096")
-    check("sanitize", ExportRenderer.sanitize("V30 / SM57 cap-edge") == "V30___SM57_cap-edge")
+    check("sanitize", ExportRenderer.sanitize("V30 / SM57 cap-edge") == "V30_SM57_cap-edge")
 }
 
 print("Analysis")

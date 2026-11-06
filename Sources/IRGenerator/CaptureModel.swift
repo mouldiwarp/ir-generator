@@ -27,6 +27,10 @@ enum LevelSignal: String, Codable, CaseIterable {
     var label: String { self == .pink ? "PINK NOISE" : "1 kHz TONE" }
 }
 
+enum ExportScope: String, CaseIterable {
+    case selected, graph, all
+}
+
 struct AppSettings: Codable, Equatable {
     var deviceUID: String?
     var measurement = MeasurementSettings()
@@ -43,6 +47,8 @@ struct AppSettings: Codable, Equatable {
     var export = ExportOptions()
     var exportPresetIDs: Set<String> = ["fractal-2048", "fractal-8192", "ik-4096"]
     var exportFolder: String?
+    /// Batch export layout; optional so settings saved before it existed still load.
+    var exportLayout: ExportLayout?
     var graph = GraphSettings()
 
     static let lockedCeiling = -12.0
@@ -130,6 +136,8 @@ final class CaptureModel: ObservableObject {
     /// Safety checklist; reset every launch.
     @Published var checklist: [Bool] = [false, false, false, false]
     @Published var showExport = false
+    /// What the Export sheet exports; set by whichever command opened it.
+    @Published var exportScope: ExportScope = .selected
     @Published var showAlign = false
     @Published var showChecklist = false
     @Published var showMicSwap = false
@@ -533,8 +541,51 @@ final class CaptureModel: ObservableObject {
     // MARK: - Export
 
     func filename(base: String, preset: ExportPreset) -> String {
-        let tag = preset.platform == ExportPreset.fractal ? "Fractal" : "TONEX"
-        return "\(ExportRenderer.sanitize(base))_\(tag)_\(preset.fileSuffix).wav"
+        ExportRenderer.filename(base: base, preset: preset)
+    }
+
+    /// Captures covered by a batch scope, in library order.
+    func exportTargets(_ scope: ExportScope, includeImported: Bool) -> [CaptureMeta] {
+        switch scope {
+        case .selected: return selected.map { [$0] } ?? []
+        case .graph: return plotted.map(\.meta)
+        case .all: return captures.filter { includeImported || !$0.isImported }
+        }
+    }
+
+    func openExport(_ scope: ExportScope) {
+        exportScope = scope
+        showExport = true
+    }
+
+    /// Renders and writes every capture × preset off the main thread. `progress` and `done` are called on the main actor.
+    func exportBatch(_ metas: [CaptureMeta], presets: [ExportPreset], layout: ExportLayout, to folder: URL,
+                     progress: @escaping @MainActor (Int, Int) -> Void,
+                     done: @escaping @MainActor (Result<[URL], Error>) -> Void) {
+        let jobs = metas.compactMap { m in audio(m.id).map { (m.name, m.sampleRate, $0.ir) } }
+        let paths = ExportRenderer.batchPaths(names: jobs.map(\.0), presets: presets, layout: layout)
+        let options = settings.export
+        let total = jobs.count * presets.count
+        Task.detached(priority: .userInitiated) {
+            do {
+                var out: [URL] = []
+                for (i, job) in jobs.enumerated() {
+                    for (j, p) in presets.enumerated() {
+                        let url = folder.appendingPathComponent(paths[i][j])
+                        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                        let h = ExportRenderer.render(job.2, masterRate: job.1, preset: p, options: options)
+                        try WavFile.write(h, sampleRate: p.sampleRate, format: p.format, to: url)
+                        out.append(url)
+                        let n = out.count
+                        await MainActor.run { progress(n, total) }
+                    }
+                }
+                let urls = out
+                await MainActor.run { done(.success(urls)) }
+            } catch {
+                await MainActor.run { done(.failure(error)) }
+            }
+        }
     }
 
     /// Writes one file per preset into `folder`. Returns the files written.

@@ -64,7 +64,56 @@ public struct ExportOptions: Codable, Hashable, Sendable {
     public var highCut: Double { highCutHz ?? 0 }
 }
 
+/// How a batch export arranges its files.
+public enum ExportLayout: String, Codable, CaseIterable, Sendable {
+    case flat, byPlatform, byCapture
+
+    public var label: String {
+        switch self {
+        case .flat: return "ONE FOLDER"
+        case .byPlatform: return "BY PLATFORM"
+        case .byCapture: return "BY CAPTURE"
+        }
+    }
+}
+
 public enum ExportRenderer {
+    /// Short platform tag used in file and folder names.
+    public static func tag(_ p: ExportPreset) -> String { p.platform == ExportPreset.fractal ? "Fractal" : "TONEX" }
+
+    /// `<name>_<Fractal|TONEX>_<rate>_<length>.wav`
+    public static func filename(base: String, preset: ExportPreset) -> String {
+        "\(sanitize(base))_\(tag(preset))_\(preset.fileSuffix).wav"
+    }
+
+    /// Relative paths for every (capture, preset) pair, in order: `result[i][j]` is capture i, preset j.
+    /// Captures with the same (sanitised) name get "_2", "_3"… so nothing in the batch overwrites anything else.
+    public static func batchPaths(names: [String], presets: [ExportPreset], layout: ExportLayout) -> [[String]] {
+        var used = Set<String>()
+        var counts: [String: Int] = [:]
+        return names.map { name in
+            var base = sanitize(name)
+            let key = base.lowercased()
+            counts[key, default: 0] += 1
+            if counts[key]! > 1 { base += "_\(counts[key]!)" }
+            return presets.map { p in
+                let file = filename(base: base, preset: p)
+                var path: String
+                switch layout {
+                case .flat: path = file
+                case .byPlatform: path = "\(tag(p))/\(file)"
+                case .byCapture: path = "\(base)/\(file)"
+                }
+                // A user name like "Cab_2" could still collide with a generated suffix; keep going until unique.
+                var n = 2
+                let stem = (path as NSString).deletingPathExtension
+                while used.contains(path.lowercased()) { path = "\(stem)-\(n).wav"; n += 1 }
+                used.insert(path.lowercased())
+                return path
+            }
+        }
+    }
+
     /// Master IR → file samples: optional minimum phase, resample, truncate with fade, normalise.
     public static func render(_ master: [Double], masterRate: Double, sampleRate: Int, length: Int,
                               options: ExportOptions) -> [Double] {
@@ -88,9 +137,9 @@ public enum ExportRenderer {
     /// Safe file name from free text.
     public static func sanitize(_ s: String) -> String {
         let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_ "))
-        let cleaned = String(s.unicodeScalars.map { allowed.contains($0) ? Character($0) : "_" })
-            .trimmingCharacters(in: .whitespaces)
-            .replacingOccurrences(of: " ", with: "_")
+        // Spaces and punctuation become "_", and runs of them collapse to one ("V30 · SM57" → "V30_SM57").
+        let mapped = String(s.unicodeScalars.map { allowed.contains($0) && $0 != " " ? Character($0) : "_" })
+        let cleaned = mapped.split(separator: "_", omittingEmptySubsequences: true).joined(separator: "_")
         return cleaned.isEmpty ? "IR" : cleaned
     }
 }

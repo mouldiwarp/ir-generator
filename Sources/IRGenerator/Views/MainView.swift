@@ -27,7 +27,7 @@ struct MainView: View {
         .preferredColorScheme(.dark)
         .frame(minWidth: 1260, minHeight: 800)
         .sheet(isPresented: $model.showExport) {
-            if let m = model.selected { ExportSheet(meta: m).environmentObject(model) }
+            ExportSheet(meta: model.selected).environmentObject(model)
         }
         .sheet(isPresented: $model.showChecklist) {
             ChecklistSheet().environmentObject(model)
@@ -181,10 +181,10 @@ struct TransportBar: View {
                 BigLampButton(title: "CAPTURE", systemImage: "waveform.path", enabled: model.state != .processing) { model.capture() }
                     .help("Play the test signal and capture an IR (⌘R)")
             }
-            BigLampButton(title: "EXPORT", systemImage: "square.and.arrow.down", lit: false, enabled: model.selected != nil) {
-                model.showExport = true
+            BigLampButton(title: "EXPORT", systemImage: "square.and.arrow.down", lit: false, enabled: !model.captures.isEmpty) {
+                model.openExport(model.selected == nil ? .all : .selected)
             }
-            .help("Export WAV files for TONEX, AmpliTube and Fractal (⌘E)")
+            .help("Export WAV files for TONEX, AmpliTube and Fractal (⌘E). Choose All in the sheet to export everything (⇧⌘E).")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
